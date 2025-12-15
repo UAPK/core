@@ -35,39 +35,46 @@ Response:
 }
 ```
 
-## Actions (Coming in v0.2)
+## Gateway Endpoints
 
-### POST /api/v1/actions
+See [Gateway API](gateway.md) for complete documentation.
 
-Submit an action request.
+### POST /api/v1/gateway/execute
+
+Execute an agent action through the gateway.
 
 **Headers:**
 - `X-API-Key`: Agent API key (required)
-- `X-Capability-Token`: Capability token (required)
 
 **Request:**
 ```json
 {
-  "action": "email:send",
-  "parameters": {
-    "to": "user@example.com",
-    "subject": "Hello",
-    "body": "World"
+  "uapk_id": "my-agent",
+  "agent_id": "my-agent",
+  "action": {
+    "type": "email",
+    "tool": "send",
+    "params": {
+      "to": "user@example.com",
+      "subject": "Hello",
+      "body": "World"
+    }
   },
-  "context": {
-    "reason": "User requested notification"
-  }
+  "capability_token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**Response (Approved):**
+**Response (Allowed):**
 ```json
 {
-  "status": "approved",
-  "interaction_record_id": "ir-abc123",
+  "interaction_id": "int-abc123",
+  "decision": "allow",
+  "executed": true,
   "result": {
     "success": true,
-    "message_id": "msg-xyz"
+    "data": {
+      "message_id": "msg-xyz"
+    }
   }
 }
 ```
@@ -75,14 +82,29 @@ Submit an action request.
 **Response (Denied):**
 ```json
 {
-  "status": "denied",
-  "interaction_record_id": "ir-abc124",
-  "reason": "Rate limit exceeded",
-  "policy": "rate-limit-emails"
+  "interaction_id": "int-abc124",
+  "decision": "deny",
+  "executed": false,
+  "reasons": [
+    {
+      "code": "BUDGET_EXCEEDED",
+      "message": "Daily email budget exceeded"
+    }
+  ]
 }
 ```
 
-## Agents (Coming in v0.2)
+### POST /api/v1/gateway/evaluate
+
+Evaluate an action without executing (dry-run).
+
+See [Gateway API](gateway.md) for details.
+
+## Manifests
+
+See [Manifests API](manifests.md) for complete documentation.
+
+## Agents (Future)
 
 ### GET /api/v1/agents
 

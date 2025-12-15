@@ -77,18 +77,24 @@ import httpx
 async def send_email(to: str, subject: str, body: str) -> dict:
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://gateway:8000/api/v1/actions",
+            "http://gateway:8000/api/v1/gateway/execute",
             headers={
                 "X-API-Key": AGENT_API_KEY,
-                "X-Capability-Token": CAPABILITY_TOKEN,
+                "Content-Type": "application/json",
             },
             json={
-                "action": "email:send",
-                "parameters": {
-                    "to": to,
-                    "subject": subject,
-                    "body": body,
+                "uapk_id": "my-agent",
+                "agent_id": "my-agent",
+                "action": {
+                    "type": "email",
+                    "tool": "send",
+                    "params": {
+                        "to": to,
+                        "subject": subject,
+                        "body": body,
+                    },
                 },
+                "capability_token": CAPABILITY_TOKEN,
                 "context": {
                     "conversation_id": current_conversation_id,
                     "reason": "User requested email notification",

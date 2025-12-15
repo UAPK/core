@@ -16,16 +16,16 @@ Include the API key in the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: your-api-key" \
-  http://localhost:8000/api/v1/actions
+  http://localhost:8000/api/v1/gateway/execute
 ```
 
 ### For Operators
 
-Include the JWT token in the `Authorization` header:
+Include the JWT bearer token in the `Authorization` header:
 
 ```bash
 curl -H "Authorization: Bearer your-jwt-token" \
-  http://localhost:8000/api/v1/agents
+  http://localhost:8000/api/v1/orgs/{org_id}/approvals
 ```
 
 ## Response Format
