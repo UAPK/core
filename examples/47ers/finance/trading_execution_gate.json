@@ -162,6 +162,83 @@
       "halt_on_latency_spike": 1000
     }
   },
+  "policy": {
+    "budgets": {
+      "submit_order": {
+        "hourly_limit": 500,
+        "daily_limit": 5000
+      },
+      "market_data": {
+        "hourly_limit": 10000
+      },
+      "cancel_order": {
+        "hourly_limit": 1000
+      }
+    },
+    "amount_caps": {
+      "USD": 100000.0
+    },
+    "jurisdiction_allowlist": ["US"],
+    "tool_allowlist": [
+      "market:quote",
+      "market:depth",
+      "order:submit",
+      "order:cancel",
+      "order:modify",
+      "position:read",
+      "position:close",
+      "risk:check",
+      "risk:calculate-var",
+      "alert:send",
+      "report:generate",
+      "audit:log"
+    ],
+    "require_capability_token": true
+  },
+  "tools": {
+    "order_submit": {
+      "type": "http_request",
+      "config": {
+        "url": "{{EXCHANGE_API_URL}}/orders",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer {{EXCHANGE_API_KEY}}",
+          "X-API-Secret": "{{EXCHANGE_API_SECRET}}"
+        },
+        "allowed_domains": ["api.exchange.com", "api-backup.exchange.com"]
+      }
+    },
+    "market_data": {
+      "type": "http_request",
+      "config": {
+        "url": "{{MARKET_DATA_URL}}/quotes",
+        "method": "GET",
+        "allowed_domains": ["market-data.provider.com"]
+      }
+    },
+    "risk_check": {
+      "type": "http_request",
+      "config": {
+        "url": "{{RISK_SYSTEM_URL}}/validate",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer {{RISK_API_KEY}}"
+        },
+        "allowed_domains": ["risk.internal.corp"]
+      }
+    },
+    "alert": {
+      "type": "webhook",
+      "config": {
+        "url": "{{PAGERDUTY_URL}}/alerts",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Token token={{PAGERDUTY_API_KEY}}"
+        },
+        "allowed_domains": ["events.pagerduty.com"]
+      }
+    }
+  },
   "connectors": {
     "exchange_primary": {
       "type": "fix",

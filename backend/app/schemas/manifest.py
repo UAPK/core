@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.uapk_manifest import ManifestStatus
 
@@ -43,14 +43,103 @@ class ManifestMetadata(BaseModel):
     source: str | None = None
 
 
+# NEW: Policy configuration for gateway decisions
+class BudgetConfig(BaseModel):
+    """Budget configuration for an action type."""
+
+    daily_limit: int | None = Field(None, ge=0, description="Maximum actions per day")
+    hourly_limit: int | None = Field(None, ge=0, description="Maximum actions per hour")
+    total_limit: int | None = Field(None, ge=0, description="Total lifetime actions")
+
+
+class PolicyConfig(BaseModel):
+    """Policy configuration for gateway enforcement.
+
+    Defines rules that the gateway's PolicyEngine uses to make
+    ALLOW/DENY/ESCALATE decisions.
+    """
+
+    # Budget limits (e.g., {"send_email": {"daily_limit": 50}})
+    budgets: dict[str, BudgetConfig] | None = Field(
+        None, description="Budget limits per action type"
+    )
+
+    # Counterparty rules
+    counterparty_allowlist: list[str] | None = Field(
+        None, description="Only allow these counterparties (domain suffixes)"
+    )
+    counterparty_denylist: list[str] | None = Field(
+        None, description="Block these counterparties (domain suffixes)"
+    )
+
+    # Jurisdiction rules
+    jurisdiction_allowlist: list[str] | None = Field(
+        None, description="Only allow these jurisdictions (ISO country codes)"
+    )
+
+    # Tool rules
+    tool_allowlist: list[str] | None = Field(None, description="Only allow these tools")
+    tool_denylist: list[str] | None = Field(None, description="Block these tools")
+
+    # Amount caps (e.g., {"USD": 10000.0})
+    amount_caps: dict[str, float] | None = Field(
+        None, description="Maximum amounts per currency/unit"
+    )
+
+    # Capability token enforcement
+    require_capability_token: bool = Field(
+        False, description="Require valid capability token for all actions"
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+# NEW: Tool connector configuration
+class ToolConfig(BaseModel):
+    """Configuration for a tool connector.
+
+    Defines how the gateway executes actions using external systems.
+    """
+
+    type: str = Field(
+        ...,
+        description="Connector type: 'http_request', 'webhook', 'mock'",
+        pattern=r"^(http_request|webhook|mock)$",
+    )
+
+    # Connector-specific configuration
+    config: dict[str, Any] = Field(..., description="Connector-specific configuration")
+
+    # Examples:
+    # - http_request: {"method": "POST", "url": "...", "allowed_domains": [...]}
+    # - webhook: {"url": "...", "method": "POST", "allowed_domains": [...]}
+    # - mock: {"response_data": {...}}
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ManifestContent(BaseModel):
-    """The actual UAPK manifest content."""
+    """The actual UAPK manifest content.
+
+    Extended schema that includes policy rules and tool configurations
+    for gateway execution.
+    """
 
     version: str = Field("1.0", pattern=r"^1\.0$")
     agent: AgentInfo
     capabilities: CapabilityDeclaration
     constraints: ManifestConstraints | None = None
     metadata: ManifestMetadata | None = None
+
+    # NEW: Policy and tools for gateway execution
+    policy: PolicyConfig | None = Field(
+        None, description="Policy rules for gateway enforcement"
+    )
+    tools: dict[str, ToolConfig] | None = Field(
+        None, description="Tool connector configurations (tool_name -> config)"
+    )
+
+    model_config = ConfigDict(extra="forbid")  # Strict validation
 
 
 class ManifestCreate(BaseModel):
@@ -82,7 +171,7 @@ class ManifestResponse(BaseModel):
     created_at: datetime
     created_by_user_id: UUID | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ManifestList(BaseModel):

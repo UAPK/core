@@ -275,8 +275,11 @@ class GatewayService:
                     },
                 )
 
-        # Build connector config
-        connector_type = tool_config.get("connector_type", "mock")
+        # Extract connector type and config
+        # NEW SCHEMA: {type: "http_request", config: {...}}
+        # OLD SCHEMA: {connector_type: "http", url: "...", method: "...", ...}
+        connector_type = tool_config.get("type") or tool_config.get("connector_type", "mock")
+        connector_config_dict = tool_config.get("config", tool_config)  # Use nested config if present, else flat
 
         if connector_type not in self.CONNECTOR_TYPES:
             return ConnectorResult(
@@ -289,15 +292,15 @@ class GatewayService:
 
         config = ConnectorConfig(
             connector_type=connector_type,
-            url=tool_config.get("url"),
-            method=tool_config.get("method", "POST"),
-            headers=tool_config.get("headers", {}),
-            timeout_seconds=tool_config.get(
+            url=connector_config_dict.get("url"),
+            method=connector_config_dict.get("method", "POST"),
+            headers=connector_config_dict.get("headers", {}),
+            timeout_seconds=connector_config_dict.get(
                 "timeout_seconds",
                 self.settings.gateway_connector_timeout_seconds,
             ),
-            secret_refs=tool_config.get("secret_refs", {}),
-            extra=tool_config.get("extra", {}),
+            secret_refs=connector_config_dict.get("secret_refs", {}),
+            extra=connector_config_dict.get("extra", {}),
         )
 
         # Resolve secrets

@@ -156,6 +156,62 @@
       "new_recipient_domain": true
     }
   },
+  "policy": {
+    "budgets": {
+      "send_email": {
+        "hourly_limit": 500,
+        "daily_limit": 2000
+      },
+      "send_bulk": {
+        "daily_limit": 10
+      }
+    },
+    "counterparty_denylist": ["competitor.com", "spam-trap.net"],
+    "tool_allowlist": [
+      "email:send",
+      "email:send-bulk",
+      "email:validate-content",
+      "email:validate-recipient",
+      "email:check-reputation",
+      "contact:lookup",
+      "contact:verify",
+      "template:render",
+      "audit:log"
+    ],
+    "require_capability_token": true
+  },
+  "tools": {
+    "email_send": {
+      "type": "webhook",
+      "config": {
+        "url": "{{EMAIL_SERVICE_URL}}/send",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer {{EMAIL_SERVICE_API_KEY}}"
+        },
+        "allowed_domains": ["sendgrid.com", "mailgun.net"]
+      }
+    },
+    "email_validate": {
+      "type": "http_request",
+      "config": {
+        "url": "{{CONTENT_SCANNER_URL}}/validate",
+        "method": "POST",
+        "allowed_domains": ["internal.corp"]
+      }
+    },
+    "contact_lookup": {
+      "type": "http_request",
+      "config": {
+        "url": "{{CRM_API_URL}}/contacts",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer {{CRM_API_KEY}}"
+        },
+        "allowed_domains": ["salesforce.com", "hubspot.com"]
+      }
+    }
+  },
   "connectors": {
     "smtp": {
       "type": "smtp",

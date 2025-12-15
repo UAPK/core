@@ -124,6 +124,109 @@
           "format": "uri"
         }
       }
+    },
+    "policy": {
+      "type": "object",
+      "description": "Policy configuration for gateway enforcement",
+      "properties": {
+        "budgets": {
+          "type": "object",
+          "description": "Budget limits per action type",
+          "additionalProperties": {
+            "type": "object",
+            "description": "Budget configuration for an action type",
+            "properties": {
+              "daily_limit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Maximum actions per day"
+              },
+              "hourly_limit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Maximum actions per hour"
+              },
+              "total_limit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total lifetime actions"
+              }
+            }
+          }
+        },
+        "counterparty_allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only allow these counterparties (domain suffixes)"
+        },
+        "counterparty_denylist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Block these counterparties (domain suffixes)"
+        },
+        "jurisdiction_allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only allow these jurisdictions (ISO country codes)"
+        },
+        "tool_allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only allow these tools"
+        },
+        "tool_denylist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Block these tools"
+        },
+        "amount_caps": {
+          "type": "object",
+          "description": "Maximum amounts per currency/unit",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "require_capability_token": {
+          "type": "boolean",
+          "default": false,
+          "description": "Require valid capability token for all actions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "description": "Tool connector configurations (tool_name -> config)",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Configuration for a tool connector",
+        "required": ["type", "config"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["http_request", "webhook", "mock"],
+            "description": "Connector type"
+          },
+          "config": {
+            "type": "object",
+            "description": "Connector-specific configuration",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
     }
-  }
+  },
+  "additionalProperties": false
 }
