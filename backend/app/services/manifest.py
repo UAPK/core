@@ -59,12 +59,22 @@ class ManifestService:
         org_id: UUID,
         uapk_id: str,
         version: str | None = None,
+        include_inactive: bool = False,
     ) -> UapkManifest | None:
-        """Get a manifest by agent ID and optionally version."""
+        """Get a manifest by agent ID and optionally version.
+
+        By default, only returns ACTIVE manifests to prevent staging uploads
+        from affecting production queries. Set include_inactive=True for admin operations.
+        """
         query = select(UapkManifest).where(
             UapkManifest.org_id == org_id,
             UapkManifest.uapk_id == uapk_id,
         )
+
+        # Only include ACTIVE manifests unless explicitly requested
+        if not include_inactive:
+            query = query.where(UapkManifest.status == ManifestStatus.ACTIVE)
+
         if version:
             query = query.where(UapkManifest.version == version)
         else:

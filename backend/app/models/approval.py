@@ -102,6 +102,16 @@ class Approval(Base):
         comment="Timestamp when override token was used",
     )
 
+    # Override token consumption (one-time-use enforcement)
+    consumed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    consumed_interaction_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
     # Relationships
     organization: Mapped["Organization"] = relationship(  # noqa: F821
         "Organization",

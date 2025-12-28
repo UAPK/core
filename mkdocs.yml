@@ -3,8 +3,8 @@ site_description: Universal Agent Protocol Kit Gateway - Policy enforcement and 
 site_author: UAPK Team
 site_url: https://uapk.info
 
-repo_name: uapk/gateway
-repo_url: https://github.com/uapk/gateway
+repo_name: Amakua/uapk-gateway
+repo_url: https://github.com/Amakua/uapk-gateway
 edit_uri: edit/main/docs/
 
 theme:
@@ -169,7 +169,7 @@ extra:
     property: G-XXXXXXXXXX
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/uapk/gateway
+      link: https://github.com/Amakua/uapk-gateway
       name: GitHub Repository
     - icon: fontawesome/solid/envelope
       link: mailto:mail@uapk.info

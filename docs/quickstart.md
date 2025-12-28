@@ -20,7 +20,7 @@ Get UAPK Gateway running locally in 5 minutes using Docker Compose.
 
 ```bash
 # Clone the repository
-git clone https://github.com/uapk/gateway.git
+git clone https://github.com/Amakua/uapk-gateway.git
 cd gateway
 
 # Copy environment file

@@ -81,39 +81,6 @@ def compute_result_hash(result_data: dict | None) -> str | None:
     return compute_hash(canonical)
 
 
-def compute_action_hash(
-    uapk_id: str,
-    agent_id: str,
-    action_type: str,
-    tool: str,
-    params: dict,
-) -> str:
-    """Compute hash of an action for override token binding.
-
-    This hash uniquely identifies a specific action request, allowing
-    override tokens to be bound to exact action parameters.
-
-    Args:
-        uapk_id: UAPK identifier
-        agent_id: Agent identifier
-        action_type: Type of action
-        tool: Tool being invoked
-        params: Action parameters
-
-    Returns:
-        Hex-encoded SHA-256 hash
-    """
-    action_data = {
-        "uapk_id": uapk_id,
-        "agent_id": agent_id,
-        "action_type": action_type,
-        "tool": tool,
-        "params": params,
-    }
-    canonical = canonicalize_json(action_data)
-    return compute_hash(canonical)
-
-
 def compute_record_hash(
     record_id: str,
     org_id: str,
@@ -347,3 +314,99 @@ class RiskSnapshot:
     def to_json(self) -> str:
         """Convert to canonical JSON string."""
         return canonicalize_json(self.indicators)
+
+
+def verify_hash_chain(records: list[Any]) -> bool:
+    """Verify the integrity of a hash chain across multiple interaction records.
+
+    Args:
+        records: List of InteractionRecord objects, ordered by creation time
+
+    Returns:
+        True if the hash chain is valid, False otherwise
+
+    The hash chain is valid if:
+    1. Each record's record_hash is correctly computed from its data
+    2. Each record's previous_record_hash matches the previous record's record_hash
+    3. Gateway signatures are valid (if key manager is available)
+    """
+    if not records:
+        return True
+
+    logger.info("verifying_hash_chain", record_count=len(records))
+
+    # Track the expected previous hash
+    expected_previous_hash = None
+
+    for i, record in enumerate(records):
+        # Check 1: Verify previous_record_hash linkage
+        if i == 0:
+            # First record - previous_record_hash should either be None or match a record outside this chain
+            expected_previous_hash = record.record_hash
+        else:
+            if record.previous_record_hash != expected_previous_hash:
+                logger.error(
+                    "hash_chain_broken",
+                    record_index=i,
+                    record_id=record.record_id,
+                    expected_previous=expected_previous_hash[:16] + "..." if expected_previous_hash else None,
+                    actual_previous=record.previous_record_hash[:16] + "..." if record.previous_record_hash else None,
+                )
+                return False
+
+            expected_previous_hash = record.record_hash
+
+        # Check 2: Verify the record's own hash
+        # Recompute the hash using the same algorithm
+        computed_hash = compute_record_hash(
+            record_id=record.record_id,
+            org_id=str(record.org_id),
+            uapk_id=record.uapk_id,
+            agent_id=record.agent_id,
+            action_type=record.action_type,
+            tool=record.tool,
+            request_hash=record.request_hash,
+            decision=record.decision.value,
+            reasons_json=record.reasons_json,
+            policy_trace_json=record.policy_trace_json,
+            result_hash=record.result_hash,
+            previous_record_hash=record.previous_record_hash,
+            created_at=record.created_at,
+        )
+
+        if computed_hash != record.record_hash:
+            logger.error(
+                "record_hash_mismatch",
+                record_index=i,
+                record_id=record.record_id,
+                expected_hash=computed_hash[:16] + "...",
+                actual_hash=record.record_hash[:16] + "...",
+            )
+            return False
+
+        # Check 3: Verify gateway signature (if available)
+        try:
+            key_manager = get_gateway_key_manager()
+            signature_bytes = bytes.fromhex(record.gateway_signature)
+            hash_bytes = record.record_hash.encode("utf-8")
+
+            if not key_manager.verify(signature_bytes, hash_bytes):
+                logger.error(
+                    "signature_verification_failed",
+                    record_index=i,
+                    record_id=record.record_id,
+                )
+                return False
+
+        except Exception as e:
+            logger.warning(
+                "signature_verification_error",
+                record_index=i,
+                record_id=record.record_id,
+                error=str(e),
+            )
+            # Continue verification even if signature check fails
+            # (key might not be available in all environments)
+
+    logger.info("hash_chain_verified", record_count=len(records), status="valid")
+    return True

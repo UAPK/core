@@ -1,13 +1,12 @@
 """Service layer for approval workflow."""
 
-import hashlib
-import json
 from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.action_hash import compute_action_hash
 from app.core.capability_jwt import create_override_token
 from app.core.logging import get_logger
 from app.models.approval import Approval, ApprovalStatus
@@ -208,7 +207,7 @@ async def approve_action(
         raise ApprovalError(f"Approval '{approval_id}' has expired")
 
     # Calculate action hash for override token
-    action_hash = _compute_action_hash(approval.action)
+    action_hash = compute_action_hash(approval.action)
 
     # Generate override token
     override_token = create_override_token(
@@ -356,10 +355,3 @@ async def get_approval_stats(
         expired=stats[ApprovalStatus.EXPIRED],
         total=total,
     )
-
-
-def _compute_action_hash(action: dict) -> str:
-    """Compute a hash of the action for override token binding."""
-    # Sort keys for deterministic hashing
-    action_json = json.dumps(action, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(action_json.encode()).hexdigest()[:16]

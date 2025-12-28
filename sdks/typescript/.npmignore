@@ -1,0 +1,41 @@
+# Source files
+src/
+tsconfig.json
+tsup.config.ts
+
+# Tests
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+jest.config.js
+coverage/
+
+# Development
+node_modules/
+.env
+.env.local
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+*.tsbuildinfo
+
+# Documentation source
+docs/
+
+# Examples (users can get from GitHub)
+examples/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Misc
+.DS_Store
+Thumbs.db

@@ -22,7 +22,7 @@ Get the help you need to successfully deploy and operate UAPK Gateway.
     - Documentation
     - Best-effort response
 
-    [Join Community](https://github.com/uapk/gateway/discussions){ .md-button }
+    [Join Community](https://github.com/Amakua/uapk-gateway/discussions){ .md-button }
 
 -   :material-email: **Pro Support**
 
@@ -100,7 +100,7 @@ For bug reports and feature requests:
 3. Include reproduction steps
 4. Attach relevant logs
 
-[Open Issue](https://github.com/uapk/gateway/issues){ .md-button }
+[Open Issue](https://github.com/Amakua/uapk-gateway/issues){ .md-button }
 
 ### Email Support
 
@@ -189,7 +189,7 @@ Monitor service status:
 
 Stay updated on releases:
 
-- [Changelog](https://github.com/uapk/gateway/releases)
+- [Changelog](https://github.com/Amakua/uapk-gateway/releases)
 - Email notifications (opt-in)
 
 ## Training

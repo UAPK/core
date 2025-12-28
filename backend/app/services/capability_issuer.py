@@ -319,7 +319,7 @@ async def get_gateway_public_key() -> tuple[str, str]:
         Tuple of (issuer_id, base64_public_key)
     """
     key_manager = get_gateway_key_manager()
-    return "gateway", key_manager.get_public_key_base64()
+    return "gateway", key_manager.public_key_base64
 
 
 async def get_issuer_public_keys(

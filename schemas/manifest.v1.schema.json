@@ -75,7 +75,7 @@
         "max_actions_per_hour": {
           "type": "integer",
           "minimum": 1,
-          "description": "Maximum actions per hour"
+          "description": "⚠️ NOT YET ENFORCED - Maximum actions per hour (planned for future release)"
         },
         "max_actions_per_day": {
           "type": "integer",
@@ -91,17 +91,21 @@
         },
         "allowed_hours": {
           "type": "object",
+          "description": "⚠️ NOT YET ENFORCED - Time window restrictions (planned for future release)",
           "properties": {
             "start": {
               "type": "string",
-              "pattern": "^\\d{2}:\\d{2}$"
+              "pattern": "^\\d{2}:\\d{2}$",
+              "description": "Start time in HH:MM format"
             },
             "end": {
               "type": "string",
-              "pattern": "^\\d{2}:\\d{2}$"
+              "pattern": "^\\d{2}:\\d{2}$",
+              "description": "End time in HH:MM format"
             },
             "timezone": {
-              "type": "string"
+              "type": "string",
+              "description": "IANA timezone (e.g., 'America/New_York')"
             }
           }
         }
@@ -131,7 +135,7 @@
       "properties": {
         "budgets": {
           "type": "object",
-          "description": "Budget limits per action type",
+          "description": "⚠️ PARTIALLY ENFORCED - Budget limits per action type. Currently only global daily_cap is enforced. Per-action-type budgets and hourly limits are planned for future release.",
           "additionalProperties": {
             "type": "object",
             "description": "Budget configuration for an action type",
@@ -139,17 +143,17 @@
               "daily_limit": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "Maximum actions per day"
+                "description": "✅ ENFORCED - Maximum actions per day for this action type"
               },
               "hourly_limit": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "Maximum actions per hour"
+                "description": "⚠️ NOT YET ENFORCED - Maximum actions per hour for this action type (planned for future release)"
               },
               "total_limit": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "Total lifetime actions"
+                "description": "⚠️ NOT YET ENFORCED - Total lifetime actions for this action type (planned for future release)"
               }
             }
           }
@@ -196,6 +200,36 @@
             "type": "number",
             "minimum": 0
           }
+        },
+        "approval_thresholds": {
+          "type": "object",
+          "description": "✅ ENFORCED - Actions that require human approval before execution",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Require approval for amounts above this threshold"
+            },
+            "currency": {
+              "type": "string",
+              "description": "Currency for amount threshold (e.g., 'USD')"
+            },
+            "action_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Require approval for these action types"
+            },
+            "tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Require approval for these tools"
+            }
+          },
+          "additionalProperties": false
         },
         "require_capability_token": {
           "type": "boolean",

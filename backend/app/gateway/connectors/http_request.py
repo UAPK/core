@@ -1,6 +1,7 @@
 """HTTP Request connector - generic HTTP requests with domain allowlist."""
 
 import ipaddress
+import json
 import socket
 import time
 from typing import Any
@@ -44,6 +45,19 @@ class HttpRequestConnector(ToolConnector):
         super().__init__(config, secrets)
         self.settings = get_settings()
 
+    def _max_response_bytes(self) -> int:
+        # Backwards-compatible: env override or connector extra override
+        # Default 1MB
+        env_val = getattr(self.settings, "gateway_max_connector_response_bytes", None)
+        if isinstance(env_val, int) and env_val > 0:
+            base = env_val
+        else:
+            base = 1_000_000
+        extra = self.config.extra.get("max_response_bytes")
+        if isinstance(extra, int) and extra > 0:
+            return extra
+        return base
+
     def _get_allowed_domains(self) -> list[str]:
         """Get the list of allowed domains."""
         # First check connector-specific allowlist
@@ -52,27 +66,27 @@ class HttpRequestConnector(ToolConnector):
         # Fall back to global setting
         return self.settings.gateway_allowed_webhook_domains
 
-    def _validate_url(self, url: str) -> tuple[bool, str | None]:
+    def _validate_url(self, url: str) -> tuple[bool, str | None, set[str] | None]:
         """Validate URL is in allowed domains and not targeting private IPs.
 
-        Returns (is_valid, error_message).
+        Returns (is_valid, error_message, resolved_ips).
         """
         allowed_domains = self._get_allowed_domains()
 
         # If no domains configured, deny by default for security
         if not allowed_domains:
-            return False, "No allowed domains configured"
+            return False, "No allowed domains configured", None
 
         try:
             parsed = urlparse(url)
 
             # Check scheme
             if parsed.scheme not in ("http", "https"):
-                return False, f"Invalid URL scheme: {parsed.scheme}"
+                return False, f"Invalid URL scheme: {parsed.scheme}", None
 
             # Check hostname is present
             if not parsed.hostname:
-                return False, "Missing hostname in URL"
+                return False, "Missing hostname in URL", None
 
             domain = parsed.hostname.lower()
 
@@ -86,28 +100,39 @@ class HttpRequestConnector(ToolConnector):
                     break
 
             if not domain_allowed:
-                return False, f"Domain '{domain}' not in allowlist"
+                return False, f"Domain '{domain}' not in allowlist", None
 
             # SSRF protection - check for private IP ranges
             try:
                 # Get all IP addresses for the hostname
+                resolved_ips: set[str] = set()
                 addr_info = socket.getaddrinfo(parsed.hostname, None)
                 for info in addr_info:
                     ip_str = info[4][0]
+                    resolved_ips.add(ip_str)
                     ip_addr = ipaddress.ip_address(ip_str)
 
                     # Check if IP is in any blocked range
                     for blocked_range in self.BLOCKED_IP_RANGES:
                         if ip_addr in blocked_range:
-                            return False, f"Access to private/internal IP {ip_str} blocked (SSRF protection)"
+                            return False, f"Access to private/internal IP {ip_str} blocked (SSRF protection)", None
 
             except socket.gaierror:
-                return False, f"Could not resolve hostname: {parsed.hostname}"
+                return False, f"Could not resolve hostname: {parsed.hostname}", None
 
-            return True, None
+            return True, None, resolved_ips
 
         except Exception as e:
-            return False, f"Invalid URL: {e}"
+            return False, f"Invalid URL: {e}", None
+
+    def _dns_drifted(self, hostname: str, expected_ips: set[str]) -> bool:
+        """Best-effort DNS rebinding mitigation: deny if DNS answer changed between validate and request."""
+        try:
+            addr_info = socket.getaddrinfo(hostname, None)
+            current_ips = {info[4][0] for info in addr_info}
+            return current_ips != expected_ips
+        except Exception:
+            return True
 
     def _build_url(self, params: dict[str, Any]) -> str:
         """Build the final URL, substituting placeholders."""
@@ -127,7 +152,7 @@ class HttpRequestConnector(ToolConnector):
 
         # Build and validate URL
         url = self._build_url(params)
-        is_valid, error = self._validate_url(url)
+        is_valid, error, resolved_ips = self._validate_url(url)
 
         if not is_valid:
             return ConnectorResult(
@@ -142,6 +167,7 @@ class HttpRequestConnector(ToolConnector):
         method = self.config.method.upper()
         headers = self._build_headers()
         timeout = self.config.timeout_seconds
+        max_bytes = self._max_response_bytes()
 
         # Resolve secrets in params
         resolved_params = self._resolve_all_params(params)
@@ -150,30 +176,57 @@ class HttpRequestConnector(ToolConnector):
         body_params = {k: v for k, v in resolved_params.items() if f"{{{k}}}" not in (self.config.url or "")}
 
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            parsed = urlparse(url)
+            if resolved_ips and self._dns_drifted(parsed.hostname or "", resolved_ips):
+                return ConnectorResult(
+                    success=False,
+                    error={
+                        "code": "SSRF_DNS_DRIFT",
+                        "message": "DNS resolution changed between validation and request (possible DNS rebinding).",
+                    },
+                    duration_ms=int((time.monotonic() - start_time) * 1000),
+                )
+
+            # Never follow redirects (prevents allowlisted domain redirecting to internal targets)
+            # Never trust environment proxies (prevents unexpected routing)
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client:
+                # Stream response to enforce size limit safely
+                request_kwargs: dict[str, Any] = {"headers": headers}
                 if method in ("GET", "DELETE"):
-                    response = await client.request(
-                        method,
-                        url,
-                        params=body_params if body_params else None,
-                        headers=headers,
-                    )
+                    request_kwargs["params"] = body_params if body_params else None
                 else:
                     headers.setdefault("Content-Type", "application/json")
-                    response = await client.request(
-                        method,
-                        url,
-                        json=body_params if body_params else None,
-                        headers=headers,
-                    )
+                    request_kwargs["json"] = body_params if body_params else None
+
+                async with client.stream(method, url, **request_kwargs) as response:
+                    raw = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        raw.extend(chunk)
+                        if len(raw) > max_bytes:
+                            return ConnectorResult(
+                                success=False,
+                                error={
+                                    "code": "RESPONSE_TOO_LARGE",
+                                    "message": f"Upstream response exceeded max size ({max_bytes} bytes).",
+                                },
+                                status_code=response.status_code,
+                                duration_ms=int((time.monotonic() - start_time) * 1000),
+                            )
+
+                    content = bytes(raw)
 
             duration_ms = int((time.monotonic() - start_time) * 1000)
 
             if 200 <= response.status_code < 300:
                 try:
-                    data = response.json()
+                    # Parse JSON only if it looks like JSON; otherwise return raw text (bounded)
+                    ctype = (response.headers.get("content-type") or "").lower()
+                    if "application/json" in ctype or content.strip().startswith((b"{", b"[")):
+                        data = json.loads(content.decode("utf-8", errors="replace"))
+                    else:
+                        data = {"raw_response": content.decode("utf-8", errors="replace")}
                 except Exception:
-                    data = {"raw_response": response.text}
+                    data = {"raw_response": content.decode("utf-8", errors="replace")}
 
                 result = ConnectorResult(
                     success=True,

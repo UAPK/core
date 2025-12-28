@@ -97,6 +97,15 @@ class GatewayKeyManager:
 
         # Check for environment variable first (production)
         env_private_key = os.environ.get("GATEWAY_ED25519_PRIVATE_KEY")
+
+        # In staging/production, Ed25519 key MUST be set to preserve audit signatures across restarts
+        if settings.environment in ("staging", "production") and not env_private_key:
+            raise KeyManagementError(
+                "GATEWAY_ED25519_PRIVATE_KEY must be set in staging/production to preserve audit signatures "
+                "across restarts. Generate with: ssh-keygen -t ed25519 -f gateway_ed25519, then set env var to "
+                "the PEM-encoded private key. Store securely in your secrets manager."
+            )
+
         if env_private_key:
             logger.info("loading_gateway_keys_from_env")
             try:

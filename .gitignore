@@ -57,6 +57,9 @@ dmypy.json
 *~
 .DS_Store
 
+# Claude Code local settings
+.claude/
+
 # Environment variables
 .env
 .env.local

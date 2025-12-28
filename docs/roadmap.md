@@ -127,13 +127,13 @@ We prioritize features based on:
 
 Have an idea? We'd love to hear it!
 
-- **GitHub**: [Open a feature request](https://github.com/uapk/gateway/issues/new)
+- **GitHub**: [Open a feature request](https://github.com/Amakua/uapk-gateway/issues/new)
 - **Email**: [features@uapk.info](mailto:features@uapk.info)
 - **Enterprise**: Contact your Customer Success Manager
 
 ## Stay Updated
 
-- **Changelog**: [github.com/uapk/gateway/releases](https://github.com/uapk/gateway/releases)
+- **Changelog**: [github.com/Amakua/uapk-gateway/releases](https://github.com/Amakua/uapk-gateway/releases)
 - **Blog**: [blog.uapk.info](https://blog.uapk.info)
 - **Twitter**: [@uapkdev](https://twitter.com/uapkdev)
 - **Newsletter**: [Subscribe](#)
@@ -154,9 +154,9 @@ Have an idea? We'd love to hear it!
 
 UAPK Gateway is open source. Contributions are welcome!
 
-- [Contributing Guide](https://github.com/uapk/gateway/blob/main/CONTRIBUTING.md)
-- [Development Setup](https://github.com/uapk/gateway/blob/main/docs/development.md)
-- [Good First Issues](https://github.com/uapk/gateway/labels/good%20first%20issue)
+- [Contributing Guide](https://github.com/Amakua/uapk-gateway/blob/main/CONTRIBUTING.md)
+- [Development Setup](https://github.com/Amakua/uapk-gateway/blob/main/docs/development.md)
+- [Good First Issues](https://github.com/Amakua/uapk-gateway/labels/good%20first%20issue)
 
 ## Related
 

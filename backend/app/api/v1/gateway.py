@@ -1,9 +1,10 @@
 """Gateway API endpoints - evaluate and execute agent actions."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.deps import ApiKeyAuth, DbSession
 from app.gateway.service import GatewayService
+from app.middleware.rate_limit import limiter
 from app.schemas.gateway import (
     GatewayActionRequest,
     GatewayDecisionResponse,
@@ -13,8 +14,10 @@ from app.schemas.gateway import (
 router = APIRouter(prefix="/gateway", tags=["Gateway"])
 
 
+@limiter.limit("120/minute")
 @router.post("/evaluate", response_model=GatewayDecisionResponse)
 async def evaluate_action(
+    request_obj: Request,
     request: GatewayActionRequest,
     db: DbSession,
     api_key: ApiKeyAuth,
@@ -43,8 +46,10 @@ async def evaluate_action(
     )
 
 
+@limiter.limit("60/minute")
 @router.post("/execute", response_model=GatewayExecuteResponse)
 async def execute_action(
+    request_obj: Request,
     request: GatewayActionRequest,
     db: DbSession,
     api_key: ApiKeyAuth,

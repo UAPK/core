@@ -1,6 +1,7 @@
 """Webhook connector - POST to configured URL."""
 
 import ipaddress
+import json
 import socket
 import time
 from typing import Any
@@ -8,6 +9,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from app.core.config import get_settings
 from app.gateway.connectors.base import ConnectorConfig, ConnectorResult, ToolConnector
 
 
@@ -39,11 +41,27 @@ class WebhookConnector(ToolConnector):
         super().__init__(config, secrets)
         if not config.url:
             raise ValueError("WebhookConnector requires a 'url' in config")
+        self.settings = get_settings()
 
-    def _validate_url_ssrf(self, url: str) -> tuple[bool, str | None]:
+    def _get_allowed_domains(self) -> list[str]:
+        """Get the list of allowed domains.
+
+        Prefer connector-specific allowlist, otherwise fall back to global.
+        """
+        if self.config.extra.get("allowed_domains"):
+            return self.config.extra["allowed_domains"]
+        return self.settings.gateway_allowed_webhook_domains
+
+    def _max_response_bytes(self) -> int:
+        env_val = getattr(self.settings, "gateway_max_connector_response_bytes", None)
+        base = env_val if isinstance(env_val, int) and env_val > 0 else 1_000_000
+        extra = self.config.extra.get("max_response_bytes")
+        return extra if isinstance(extra, int) and extra > 0 else base
+
+    def _validate_url(self, url: str) -> tuple[bool, str | None, set[str] | None]:
         """Validate URL against SSRF attacks.
 
-        Returns (is_valid, error_message).
+        Returns (is_valid, error_message, resolved_ips).
 
         Blocks:
         - Private IP ranges (RFC 1918, loopback, link-local)
@@ -57,39 +75,56 @@ class WebhookConnector(ToolConnector):
 
             # Check scheme
             if parsed.scheme not in ("http", "https"):
-                return False, f"Invalid URL scheme: {parsed.scheme}"
+                return False, f"Invalid URL scheme: {parsed.scheme}", None
 
             # Check hostname is present
             if not parsed.hostname:
-                return False, "Missing hostname in URL"
+                return False, "Missing hostname in URL", None
 
-            # Check allowed_domains if configured
-            allowed_domains = self.config.extra.get("allowed_domains", [])
-            if allowed_domains:
-                hostname = parsed.hostname.lower()
-                if not any(hostname.endswith(domain.lower()) for domain in allowed_domains):
-                    return False, f"Domain '{parsed.hostname}' not in allowed list"
+            # Check allowed_domains (deny-by-default for security)
+            allowed_domains = self._get_allowed_domains()
+            if not allowed_domains:
+                return False, "No allowed domains configured for webhook", None
+
+            hostname = parsed.hostname.lower()
+            # Check for exact match OR subdomain (with dot prefix) to prevent suffix bypass
+            # e.g., "example.com" allows "example.com" and "sub.example.com" but NOT "evilexample.com"
+            if not any(
+                hostname == domain.lower() or hostname.endswith(f".{domain.lower()}")
+                for domain in allowed_domains
+            ):
+                return False, f"Domain '{parsed.hostname}' not in allowlist", None
 
             # Resolve hostname to IP and check against blocked ranges
             try:
                 # Get all IP addresses for the hostname
+                resolved_ips: set[str] = set()
                 addr_info = socket.getaddrinfo(parsed.hostname, None)
                 for info in addr_info:
                     ip_str = info[4][0]
+                    resolved_ips.add(ip_str)
                     ip_addr = ipaddress.ip_address(ip_str)
 
                     # Check if IP is in any blocked range
                     for blocked_range in self.BLOCKED_IP_RANGES:
                         if ip_addr in blocked_range:
-                            return False, f"Access to private/internal IP {ip_str} blocked (SSRF protection)"
+                            return False, f"Access to private/internal IP {ip_str} blocked (SSRF protection)", None
 
             except socket.gaierror:
-                return False, f"Could not resolve hostname: {parsed.hostname}"
+                return False, f"Could not resolve hostname: {parsed.hostname}", None
 
-            return True, None
+            return True, None, resolved_ips
 
         except Exception as e:
-            return False, f"Invalid URL: {str(e)}"
+            return False, f"Invalid URL: {str(e)}", None
+
+    def _dns_drifted(self, hostname: str, expected_ips: set[str]) -> bool:
+        try:
+            addr_info = socket.getaddrinfo(hostname, None)
+            current_ips = {info[4][0] for info in addr_info}
+            return current_ips != expected_ips
+        except Exception:
+            return True
 
     async def execute(self, params: dict[str, Any]) -> ConnectorResult:
         """Execute the webhook by POSTing params to the configured URL."""
@@ -98,7 +133,7 @@ class WebhookConnector(ToolConnector):
         url = self.config.url
 
         # SSRF protection - validate URL before making request
-        is_valid, error_msg = self._validate_url_ssrf(url)
+        is_valid, error_msg, resolved_ips = self._validate_url(url)
         if not is_valid:
             return ConnectorResult(
                 success=False,
@@ -112,25 +147,51 @@ class WebhookConnector(ToolConnector):
         headers = self._build_headers()
         headers.setdefault("Content-Type", "application/json")
         timeout = self.config.timeout_seconds
+        max_bytes = self._max_response_bytes()
 
         # Resolve any secrets in params
         resolved_params = self._resolve_all_params(params)
 
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(
-                    url,
-                    json=resolved_params,
-                    headers=headers,
+            parsed = urlparse(url)
+            if resolved_ips and self._dns_drifted(parsed.hostname or "", resolved_ips):
+                return ConnectorResult(
+                    success=False,
+                    error={
+                        "code": "SSRF_DNS_DRIFT",
+                        "message": "DNS resolution changed between validation and request (possible DNS rebinding).",
+                    },
+                    duration_ms=int((time.monotonic() - start_time) * 1000),
                 )
+
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client:
+                async with client.stream("POST", url, json=resolved_params, headers=headers) as response:
+                    raw = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        raw.extend(chunk)
+                        if len(raw) > max_bytes:
+                            return ConnectorResult(
+                                success=False,
+                                error={
+                                    "code": "RESPONSE_TOO_LARGE",
+                                    "message": f"Webhook response exceeded max size ({max_bytes} bytes).",
+                                },
+                                status_code=response.status_code,
+                                duration_ms=int((time.monotonic() - start_time) * 1000),
+                            )
+                    content = bytes(raw)
 
             duration_ms = int((time.monotonic() - start_time) * 1000)
 
             if response.status_code >= 200 and response.status_code < 300:
                 try:
-                    data = response.json()
+                    ctype = (response.headers.get("content-type") or "").lower()
+                    if "application/json" in ctype or content.strip().startswith((b"{", b"[")):
+                        data = json.loads(content.decode("utf-8", errors="replace"))
+                    else:
+                        data = {"raw_response": content.decode("utf-8", errors="replace")}
                 except Exception:
-                    data = {"raw_response": response.text}
+                    data = {"raw_response": content.decode("utf-8", errors="replace")}
 
                 result = ConnectorResult(
                     success=True,

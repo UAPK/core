@@ -10,11 +10,13 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.action_hash import compute_action_hash
 from app.core.capability_jwt import CapabilityTokenClaims, verify_capability_token
 from app.core.config import get_settings
 from app.core.ed25519 import public_key_from_base64
 from app.core.logging import get_logger
 from app.models.action_counter import ActionCounter
+from app.models.approval import Approval, ApprovalStatus
 from app.models.capability_issuer import CapabilityIssuer, IssuerStatus
 from app.models.uapk_manifest import ManifestStatus, UapkManifest
 from app.schemas.gateway import (
@@ -49,6 +51,7 @@ class PolicyResult:
     decision: GatewayDecision
     reasons: list[ReasonDetail] = field(default_factory=list)
     manifest: UapkManifest | None = None
+    token_claims: CapabilityTokenClaims | None = None
     budget_count: int = 0
     budget_limit: int = 0
     policy_trace: list[dict] = field(default_factory=list)
@@ -141,10 +144,54 @@ class PolicyEngine:
         else:
             result.add_trace("capability_token_validation", "skip", {"reason": "no_token_provided"})
 
+        # 2b. If the capability token is an override token, validate it.
+        # NOTE: Validation is side-effect free. Consumption (one-time use) is
+        # enforced in the execute flow.
+        override_valid = False
+        if context.token_claims and context.token_claims.approval_id and context.token_claims.action_hash:
+            override_valid = await self._validate_override_token(context, result)
+            if not override_valid:
+                result.decision = GatewayDecision.DENY
+                result.add_trace(
+                    "override_token_validation",
+                    "fail",
+                    {
+                        "approval_id": context.token_claims.approval_id,
+                    },
+                )
+                return result
+            result.add_trace(
+                "override_token_validation",
+                "pass",
+                {
+                    "approval_id": context.token_claims.approval_id,
+                },
+            )
+        else:
+            result.add_trace(
+                "override_token_validation",
+                "skip",
+                {"reason": "not_override_token"},
+            )
+
         # Extract policy config from manifest
         manifest_json = manifest.manifest_json
         constraints = manifest_json.get("constraints", {})
         policy_config = manifest_json.get("policy", {})
+
+        # Normalize policy config to handle both naming conventions
+        policy_config = self._normalize_policy_config(policy_config)
+
+        # 2c. Check if policy requires capability token
+        if policy_config.get("require_capability_token", False) and not context.capability_token:
+            result.decision = GatewayDecision.DENY
+            result.add_reason(
+                ReasonCode.CAPABILITY_TOKEN_REQUIRED,
+                "Policy requires a capability token for all actions",
+            )
+            result.add_trace("require_capability_token_check", "fail")
+            return result
+        result.add_trace("require_capability_token_check", "pass")
 
         # 3. Check action type allowed (manifest)
         if not self._check_action_type_allowed(context, policy_config, result):
@@ -170,6 +217,13 @@ class PolicyEngine:
             return result
         result.add_trace("manifest_tool", "pass", {"tool": context.action.tool})
 
+        # 5b. Check tool exists in manifest configuration
+        if not self._check_tool_configured(context, manifest_json, result):
+            result.decision = GatewayDecision.DENY
+            result.add_trace("tool_configured", "fail", {"tool": context.action.tool})
+            return result
+        result.add_trace("tool_configured", "pass", {"tool": context.action.tool})
+
         # 6. Check tool allowed (capability token)
         if context.token_claims:
             if not self._check_token_tool_allowed(context, result):
@@ -179,6 +233,15 @@ class PolicyEngine:
             result.add_trace("token_tool", "pass")
         else:
             result.add_trace("token_tool", "skip")
+
+        # 6b. Check approval thresholds (requires human approval)
+        approval_result = self._check_approval_thresholds(context, policy_config, result)
+        if approval_result == GatewayDecision.ESCALATE:
+            result.decision = GatewayDecision.ESCALATE
+            result.add_trace("approval_thresholds", "escalate")
+            # Note: Don't return yet, continue checks for hard limits that would DENY
+        else:
+            result.add_trace("approval_thresholds", "pass")
 
         # 7. Check amount caps (manifest)
         amount_result = self._check_amount_caps(context, policy_config, result)
@@ -262,8 +325,18 @@ class PolicyEngine:
         result.risk_indicators["budget_current"] = result.budget_count
         result.risk_indicators["budget_limit"] = result.budget_limit
 
+        # Apply override token to bypass ESCALATE decisions (human already approved)
+        if override_valid and result.decision == GatewayDecision.ESCALATE:
+            result.decision = GatewayDecision.ALLOW
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_ACCEPTED,
+                "Override token accepted; required approval already granted",
+                {"approval_id": context.token_claims.approval_id if context.token_claims else None},
+            )
+            result.add_trace("override_token_applied", "pass")
+
         # If we get here with ALLOW, add success reason
-        if result.decision == GatewayDecision.ALLOW:
+        if result.decision == GatewayDecision.ALLOW and not override_valid:
             result.add_reason(
                 ReasonCode.ALL_CHECKS_PASSED,
                 "All policy checks passed",
@@ -272,17 +345,78 @@ class PolicyEngine:
         return result
 
     async def _get_manifest(self, org_id: UUID, uapk_id: str) -> UapkManifest | None:
-        """Get the active manifest for a UAPK ID."""
+        """Get the active manifest for a UAPK ID.
+
+        Returns the most recently created ACTIVE manifest.
+        PENDING/INACTIVE manifests are ignored to prevent staging uploads from breaking production.
+        """
         result = await self.db.execute(
             select(UapkManifest)
             .where(
                 UapkManifest.org_id == org_id,
                 UapkManifest.uapk_id == uapk_id,
+                UapkManifest.status == ManifestStatus.ACTIVE,  # Only select ACTIVE manifests
             )
             .order_by(UapkManifest.created_at.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    def _normalize_policy_config(self, policy_config: dict) -> dict:
+        """Normalize policy config to accept both manifest schema and engine naming.
+
+        Supports backwards compatibility for manifests created with the official
+        schema naming conventions vs. the internal PolicyEngine naming.
+
+        Manifest Schema Names → PolicyEngine Names:
+        - tool_allowlist → allowed_tools
+        - tool_denylist → denied_tools
+        - jurisdiction_allowlist → allowed_jurisdictions
+        - counterparty_allowlist → counterparty.allowlist
+        - counterparty_denylist → counterparty.denylist
+        - amount_caps: {"USD": 1000} → amount_caps: {max_amount, ...}
+        """
+        normalized = policy_config.copy()
+
+        # 1. Normalize tool lists
+        if "tool_allowlist" in policy_config and "allowed_tools" not in policy_config:
+            normalized["allowed_tools"] = policy_config["tool_allowlist"]
+        if "tool_denylist" in policy_config and "denied_tools" not in policy_config:
+            normalized["denied_tools"] = policy_config["tool_denylist"]
+
+        # 2. Normalize jurisdiction lists
+        if "jurisdiction_allowlist" in policy_config and "allowed_jurisdictions" not in policy_config:
+            normalized["allowed_jurisdictions"] = policy_config["jurisdiction_allowlist"]
+
+        # 3. Normalize counterparty rules (flat to nested)
+        if ("counterparty_allowlist" in policy_config or "counterparty_denylist" in policy_config) and \
+           "counterparty" not in policy_config:
+            normalized["counterparty"] = {}
+            if "counterparty_allowlist" in policy_config:
+                normalized["counterparty"]["allowlist"] = policy_config["counterparty_allowlist"]
+            if "counterparty_denylist" in policy_config:
+                normalized["counterparty"]["denylist"] = policy_config["counterparty_denylist"]
+
+        # 4. Normalize amount_caps (simple dict to structured object)
+        amount_caps = policy_config.get("amount_caps")
+        if amount_caps and isinstance(amount_caps, dict):
+            # Check if it's the simple format: {"USD": 1000, "EUR": 500}
+            # vs structured format: {"max_amount": 1000, "escalate_above": 500, ...}
+            if not any(k in amount_caps for k in ["max_amount", "escalate_above", "param_paths", "currency_field"]):
+                # It's the simple per-currency format
+                # Keep the currency mapping for proper per-currency enforcement
+                if amount_caps:
+                    # Use minimum value as conservative default when currency is ambiguous
+                    min_value = min(amount_caps.values())
+                    normalized["amount_caps"] = {
+                        "max_amount": min_value,  # Conservative default
+                        "per_currency": amount_caps,  # Preserve currency-specific limits
+                        "param_paths": ["amount", "value", "total"],
+                        "currency_field": "currency",
+                    }
+                    # Note: per_currency takes precedence in _check_amount_caps if currency is specified
+
+        return normalized
 
     def _check_action_type_allowed(
         self,
@@ -336,6 +470,112 @@ class PolicyEngine:
 
         return True
 
+    def _check_tool_configured(
+        self,
+        context: PolicyContext,
+        manifest_json: dict,
+        result: PolicyResult,
+    ) -> bool:
+        """Check if the tool is configured in the manifest.
+
+        Returns True if tool exists in manifest.tools, False otherwise.
+        """
+        tools = manifest_json.get("tools", {})
+        if not tools:
+            # No tools configured at all
+            result.add_reason(
+                ReasonCode.TOOL_NOT_ALLOWED,
+                f"Tool '{context.action.tool}' not configured in manifest (no tools defined)",
+            )
+            return False
+
+        if context.action.tool not in tools:
+            result.add_reason(
+                ReasonCode.TOOL_NOT_ALLOWED,
+                f"Tool '{context.action.tool}' not configured in manifest",
+                {"configured_tools": list(tools.keys())},
+            )
+            return False
+
+        return True
+
+    def _check_approval_thresholds(
+        self,
+        context: PolicyContext,
+        policy_config: dict,
+        result: PolicyResult,
+    ) -> GatewayDecision:
+        """Check if action requires human approval based on thresholds.
+
+        Returns ESCALATE if approval is required, ALLOW otherwise.
+        """
+        approval_thresholds = policy_config.get("approval_thresholds", {})
+        if not approval_thresholds:
+            return GatewayDecision.ALLOW
+
+        # Check action type threshold
+        required_action_types = approval_thresholds.get("action_types", [])
+        if required_action_types and context.action.type in required_action_types:
+            result.add_reason(
+                ReasonCode.REQUIRES_HUMAN_APPROVAL,
+                f"Action type '{context.action.type}' requires human approval",
+                {"action_type": context.action.type},
+            )
+            return GatewayDecision.ESCALATE
+
+        # Check tool threshold
+        required_tools = approval_thresholds.get("tools", [])
+        if required_tools and context.action.tool in required_tools:
+            result.add_reason(
+                ReasonCode.REQUIRES_HUMAN_APPROVAL,
+                f"Tool '{context.action.tool}' requires human approval",
+                {"tool": context.action.tool},
+            )
+            return GatewayDecision.ESCALATE
+
+        # Check amount threshold
+        threshold_amount = approval_thresholds.get("amount")
+        threshold_currency = approval_thresholds.get("currency", "USD")
+
+        if threshold_amount is not None:
+            # Extract amount from params (check common field names)
+            amount = None
+            currency = None
+
+            for field in ["amount", "value", "total"]:
+                if field in context.action.params:
+                    amount = context.action.params.get(field)
+                    break
+
+            # Extract currency
+            for field in ["currency", "unit"]:
+                if field in context.action.params:
+                    currency = context.action.params.get(field)
+                    break
+
+            # If we found an amount, check threshold
+            if amount is not None:
+                try:
+                    amount_value = float(amount)
+                    # Check if currency matches (or no specific currency required)
+                    if not threshold_currency or currency == threshold_currency:
+                        if amount_value > threshold_amount:
+                            result.add_reason(
+                                ReasonCode.AMOUNT_REQUIRES_APPROVAL,
+                                f"Amount {amount_value} {currency or threshold_currency} exceeds approval threshold {threshold_amount}",
+                                {
+                                    "amount": amount_value,
+                                    "currency": currency or threshold_currency,
+                                    "threshold": threshold_amount,
+                                },
+                            )
+                            return GatewayDecision.ESCALATE
+                except (ValueError, TypeError):
+                    # Amount not a valid number, skip check
+                    pass
+
+        return GatewayDecision.ALLOW
+
     def _check_amount_caps(
         self,
         context: PolicyContext,
@@ -355,6 +595,7 @@ class PolicyEngine:
         max_amount = amount_caps.get("max_amount")
         escalate_amount = amount_caps.get("escalate_above")
         currency_field = amount_caps.get("currency_field", "currency")
+        per_currency = amount_caps.get("per_currency", {})
 
         # Extract amount from params
         amount = None
@@ -372,7 +613,24 @@ class PolicyEngine:
         except (TypeError, ValueError):
             return GatewayDecision.ALLOW
 
-        # Check hard cap
+        # If per-currency caps are specified, check currency-specific limit first
+        if per_currency:
+            currency = self._get_nested_value(context.action.params, currency_field)
+            if currency and currency in per_currency:
+                # Use currency-specific cap
+                currency_max = per_currency[currency]
+                if amount > currency_max:
+                    result.add_reason(
+                        ReasonCode.AMOUNT_EXCEEDS_CAP,
+                        f"Amount {amount} {currency} exceeds maximum allowed {currency_max} {currency}",
+                        {"amount": amount, "currency": currency, "max_amount": currency_max},
+                    )
+                    return GatewayDecision.DENY
+                # Currency-specific check passed
+                return GatewayDecision.ALLOW
+            # Currency not specified or not in caps - fall back to conservative max_amount
+
+        # Check hard cap (general or conservative default)
         if max_amount is not None and amount > max_amount:
             result.add_reason(
                 ReasonCode.AMOUNT_EXCEEDS_CAP,
@@ -557,6 +815,44 @@ class PolicyEngine:
         await self.db.commit()
         return result.scalar_one()
 
+    async def reserve_budget_if_available(
+        self,
+        org_id: UUID,
+        uapk_id: str,
+        daily_cap: int,
+    ) -> int | None:
+        """Atomically increment counter only if count < daily_cap (hard budget enforcement).
+
+        Returns new count if reserved, or None if cap exceeded.
+
+        This ensures budget caps are strictly enforced even under high concurrency:
+        the UPDATE only succeeds if the current count is below the cap.
+        """
+        today = date.today()
+
+        # Atomic upsert with conditional increment (only if count < cap)
+        stmt = (
+            insert(ActionCounter)
+            .values(
+                org_id=org_id,
+                uapk_id=uapk_id,
+                counter_date=today,
+                count=1,
+                updated_at=datetime.now(UTC),
+            )
+            .on_conflict_do_update(
+                constraint="uq_action_counter_org_uapk_date",
+                set_={"count": ActionCounter.count + 1, "updated_at": datetime.now(UTC)},
+                where=(ActionCounter.count < daily_cap),
+            )
+            .returning(ActionCounter.count)
+        )
+
+        result = await self.db.execute(stmt)
+        row = result.scalar_one_or_none()
+        await self.db.commit()
+        return row
+
     def _get_nested_value(self, data: dict, path: str) -> Any:
         """Get a nested value from a dict using dot notation."""
         keys = path.split(".")
@@ -610,6 +906,25 @@ class PolicyEngine:
 
         # Store claims in context for later checks
         context.token_claims = claims
+        result.token_claims = claims
+
+        # Verify token type is correct
+        # Capability tokens must have token_type="capability" and must NOT have action_hash/approval_id
+        # Override tokens must have token_type="override" and MUST have action_hash/approval_id
+        if claims.action_hash or claims.approval_id:
+            if claims.token_type != "override":
+                result.add_reason(
+                    ReasonCode.CAPABILITY_TOKEN_INVALID,
+                    "Token with action_hash/approval_id must have token_type='override'",
+                )
+                return False
+        else:
+            if claims.token_type == "override":
+                result.add_reason(
+                    ReasonCode.CAPABILITY_TOKEN_INVALID,
+                    "Override token must have action_hash and approval_id",
+                )
+                return False
 
         # Verify token is for this org
         if claims.org_id != str(context.org_id):
@@ -652,6 +967,108 @@ class PolicyEngine:
             issuer_id=claims.iss,
             token_id=claims.jti,
         )
+
+        return True
+
+    async def _validate_override_token(
+        self,
+        context: PolicyContext,
+        result: PolicyResult,
+    ) -> bool:
+        """Validate that an override token is bound to a specific approved action.
+
+        This check is intentionally **side-effect free**: it does not mark an
+        approval as consumed. Consumption is enforced in the execute flow to
+        avoid mutating state on evaluate() requests.
+        """
+        claims = context.token_claims
+        if not claims or not claims.approval_id or not claims.action_hash:
+            return True  # Not an override token
+
+        # 1) Action hash must match the current request action
+        request_action_hash = compute_action_hash(context.action.model_dump())
+        if request_action_hash != claims.action_hash:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                "Override token does not match requested action",
+                {
+                    "expected_action_hash": claims.action_hash,
+                    "actual_action_hash": request_action_hash,
+                },
+            )
+            return False
+
+        # 2) Approval must exist and be approved
+        approval_result = await self.db.execute(
+            select(Approval).where(
+                Approval.org_id == context.org_id,
+                Approval.approval_id == claims.approval_id,
+            )
+        )
+        approval = approval_result.scalar_one_or_none()
+        if approval is None:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                f"Approval '{claims.approval_id}' not found",
+                {"approval_id": claims.approval_id},
+            )
+            return False
+
+        if approval.status != ApprovalStatus.APPROVED:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                f"Approval '{claims.approval_id}' is not approved (status: {approval.status.value})",
+                {"status": approval.status.value},
+            )
+            return False
+
+        now = datetime.now(UTC)
+        if approval.expires_at and approval.expires_at < now:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                f"Approval '{claims.approval_id}' has expired",
+                {"expires_at": approval.expires_at.isoformat()},
+            )
+            return False
+
+        # 3) Approval identity must match this request
+        if approval.uapk_id != context.uapk_id or approval.agent_id != context.agent_id:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                "Approval identity does not match request",
+                {
+                    "approval_uapk_id": approval.uapk_id,
+                    "request_uapk_id": context.uapk_id,
+                    "approval_agent_id": approval.agent_id,
+                    "request_agent_id": context.agent_id,
+                },
+            )
+            return False
+
+        # 4) One-time-use: must not be consumed already
+        if getattr(approval, "consumed_at", None) is not None:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_ALREADY_USED,
+                f"Approval '{claims.approval_id}' already consumed",
+                {
+                    "consumed_at": approval.consumed_at.isoformat() if approval.consumed_at else None,
+                    "consumed_interaction_id": approval.consumed_interaction_id,
+                },
+            )
+            return False
+
+        # 5) Approval action hash must match token hash (defense-in-depth)
+        approval_action_hash = compute_action_hash(approval.action)
+        if approval_action_hash != claims.action_hash:
+            result.add_reason(
+                ReasonCode.OVERRIDE_TOKEN_INVALID,
+                "Approval action does not match override token",
+                {
+                    "approval_action_hash": approval_action_hash,
+                    "token_action_hash": claims.action_hash,
+                },
+            )
+            return False
 
         return True
 

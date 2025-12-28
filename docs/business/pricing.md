@@ -14,19 +14,19 @@ UAPK Gateway offers flexible engagement options: self-host the open-source versi
 UAPK Gateway is **Apache-2.0 licensed** and fully self-hostable.
 
 **What you get:**
-- Full source code on [GitHub](https://github.com/uapk/gateway)
+- Full source code on [GitHub](https://github.com/Amakua/uapk-gateway)
 - All core features (policy enforcement, approvals, audit logs, capability tokens)
 - Docker Compose deployment for one-VM setup
-- Community support via [GitHub Discussions](https://github.com/uapk/gateway/discussions)
+- Community support via [GitHub Discussions](https://github.com/Amakua/uapk-gateway/discussions)
 - Complete documentation and examples
 - 47ers template library
 
 **Best for:** Teams who want to self-manage, contribute back to the project, or evaluate before engaging commercially.
 
-**License:** [Apache License 2.0](https://github.com/uapk/gateway/blob/main/LICENSE)
+**License:** [Apache License 2.0](https://github.com/Amakua/uapk-gateway/blob/main/LICENSE)
 
 [Get Started →](../quickstart.md){ .md-button .md-button--primary }
-[View on GitHub →](https://github.com/uapk/gateway){ .md-button }
+[View on GitHub →](https://github.com/Amakua/uapk-gateway){ .md-button }
 
 ---
 
@@ -183,7 +183,7 @@ The open-source version can be deployed in minutes:
 
 ```bash
 # Clone and start
-git clone https://github.com/uapk/gateway.git
+git clone https://github.com/Amakua/uapk-gateway.git
 cd gateway
 make dev
 

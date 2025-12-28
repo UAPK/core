@@ -2,10 +2,10 @@
 
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select
 
-from app.api.deps import DbSession
+from app.api.deps import ApiKeyAuth, DbSession
 from app.models.action_counter import ActionCounter
 from app.models.approval import Approval, ApprovalStatus
 from app.models.interaction_record import Decision, InteractionRecord
@@ -13,9 +13,11 @@ from app.models.interaction_record import Decision, InteractionRecord
 router = APIRouter(tags=["Metrics"])
 
 
-@router.get("/metrics", include_in_schema=False)
+@router.get("/metrics", dependencies=[Depends(ApiKeyAuth)], include_in_schema=False)
 async def prometheus_metrics(db: DbSession) -> Response:
     """Prometheus metrics endpoint.
+
+    Requires API key authentication via X-API-Key header.
 
     Exposes:
     - uapk_gateway_requests_total (by decision)
@@ -30,7 +32,7 @@ async def prometheus_metrics(db: DbSession) -> Response:
     for decision in Decision:
         result = await db.execute(
             select(func.count(InteractionRecord.id)).where(
-                InteractionRecord.timestamp >= today_start,
+                InteractionRecord.created_at >= today_start,
                 InteractionRecord.decision == decision,
             )
         )

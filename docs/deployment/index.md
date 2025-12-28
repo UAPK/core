@@ -82,7 +82,7 @@ For development and testing:
 
 ```bash
 # Clone repository
-git clone https://github.com/uapk/gateway.git
+git clone https://github.com/Amakua/uapk-gateway.git
 cd gateway
 
 # Start services

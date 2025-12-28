@@ -45,5 +45,17 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def default_org_id(self) -> uuid.UUID | None:
+        """Best-effort default organization for legacy routes.
+
+        Several API and UI routes currently assume a "default" organization and
+        access `current_user.default_org_id`. This property is a compatibility
+        shim until all routes are fully org-scoped.
+        """
+        if not self.memberships:
+            return None
+        return self.memberships[0].org_id
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email})>"

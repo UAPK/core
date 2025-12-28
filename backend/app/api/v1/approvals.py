@@ -26,13 +26,13 @@ router = APIRouter(prefix="/orgs/{org_id}/approvals", tags=["approvals"])
 @router.get("", response_model=ApprovalList)
 async def list_approvals(
     org_id: UUID,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
+    db: DbSession,
+    current_user: CurrentUser,
     status_filter: ApprovalStatus | None = Query(None, alias="status"),
     uapk_id: str | None = None,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    db: DbSession,
-    current_user: CurrentUser,
 ) -> ApprovalList:
     """List approvals for the organization.
 
@@ -56,10 +56,10 @@ async def list_approvals(
 @router.get("/pending", response_model=list[ApprovalResponse])
 async def get_pending_approvals(
     org_id: UUID,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
-    limit: int = Query(50, ge=1, le=100),
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=100),
 ) -> list[ApprovalResponse]:
     """Get pending approvals for the organization.
 
@@ -75,7 +75,7 @@ async def get_pending_approvals(
 @router.get("/stats", response_model=ApprovalStats)
 async def get_approval_stats(
     org_id: UUID,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> ApprovalStats:
@@ -90,7 +90,7 @@ async def get_approval_stats(
 async def get_approval(
     org_id: UUID,
     approval_id: str,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> ApprovalResponse:
@@ -115,7 +115,7 @@ async def approve_action(
     org_id: UUID,
     approval_id: str,
     request: ApproveRequest,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> ApprovalDecisionResponse:
@@ -149,7 +149,7 @@ async def deny_action(
     org_id: UUID,
     approval_id: str,
     request: DenyRequest,
-    _: Annotated[None, Depends(RequireOrgOperator)],  # RBAC check
+    _: Annotated[None, RequireOrgOperator],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> ApprovalDecisionResponse:

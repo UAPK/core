@@ -46,7 +46,7 @@ org_router = APIRouter(prefix="/orgs/{org_id}/capabilities", tags=["capabilities
 async def register_issuer(
     org_id: UUID,
     issuer_data: IssuerCreate,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check - admin only
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check - admin only
     db: DbSession,
     current_user: CurrentUser,
 ) -> IssuerResponse:
@@ -75,10 +75,10 @@ async def register_issuer(
 @org_router.get("/issuers", response_model=IssuerList)
 async def list_issuers(
     org_id: UUID,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check
-    include_revoked: bool = False,
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
+    include_revoked: bool = False,
 ) -> IssuerList:
     """List capability issuers for the organization.
 
@@ -99,7 +99,7 @@ async def list_issuers(
 async def get_issuer(
     org_id: UUID,
     issuer_id: str,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> IssuerResponse:
@@ -123,7 +123,7 @@ async def get_issuer(
 async def revoke_issuer(
     org_id: UUID,
     issuer_id: str,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check - admin only
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check - admin only
     db: DbSession,
     current_user: CurrentUser,
 ) -> IssuerResponse:
@@ -151,7 +151,7 @@ async def revoke_issuer(
 async def issue_token(
     org_id: UUID,
     request: IssueTokenRequest,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check - admin only
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check - admin only
     db: DbSession,
     current_user: CurrentUser,
 ) -> IssueTokenResponse:
@@ -186,7 +186,7 @@ async def issue_token(
 async def get_issuer_public_key(
     org_id: UUID,
     issuer_id: str,
-    _: Annotated[None, Depends(RequireOrgAdmin)],  # RBAC check
+    _: Annotated[None, RequireOrgAdmin],  # RBAC check
     db: DbSession,
     current_user: CurrentUser,
 ) -> dict:

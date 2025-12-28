@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     api_keys,
     approvals,
+    audit_export,
     auth,
     capabilities,
     capability_tokens,
@@ -43,6 +44,9 @@ router.include_router(gateway.router)
 
 # Approval workflow
 router.include_router(approvals.router)
+
+# Audit Export (S3 Object Lock)
+router.include_router(audit_export.router)
 
 # Metrics
 router.include_router(metrics.router)

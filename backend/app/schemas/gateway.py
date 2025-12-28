@@ -23,6 +23,7 @@ class ReasonCode(str, Enum):
     POLICY_PASSED = "policy_passed"
     ALL_CHECKS_PASSED = "all_checks_passed"
     OVERRIDE_TOKEN_VALID = "override_token_valid"
+    OVERRIDE_TOKEN_ACCEPTED = "override_token_accepted"
 
     # Deny reasons
     OVERRIDE_TOKEN_INVALID = "override_token_invalid"
@@ -42,6 +43,7 @@ class ReasonCode(str, Enum):
     INVALID_REQUEST = "invalid_request"
 
     # Capability token deny reasons
+    CAPABILITY_TOKEN_REQUIRED = "capability_token_required"
     CAPABILITY_TOKEN_INVALID = "capability_token_invalid"
     CAPABILITY_TOKEN_EXPIRED = "capability_token_expired"
     TOKEN_ISSUER_REVOKED = "token_issuer_revoked"

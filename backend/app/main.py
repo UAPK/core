@@ -1,6 +1,7 @@
 """UAPK Gateway - FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+import os
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -12,6 +13,8 @@ from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.logging import get_logger, setup_logging
 from app.ui.routes import router as ui_router
+from app.middleware.body_size_limit import BodySizeLimitMiddleware
+from app.middleware.rate_limit import setup_rate_limiting
 
 
 @asynccontextmanager
@@ -67,6 +70,12 @@ def create_app() -> FastAPI:
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
+
+    # Request body size cap (configured via settings)
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.gateway_max_request_bytes)
+
+    # Global rate limiting (default; override per-route if desired)
+    setup_rate_limiting(app, default_limits=["200/minute"])
 
     # Mount static files for UI
     app.mount("/static", StaticFiles(directory="app/ui/static"), name="static")

@@ -49,8 +49,9 @@ class CapabilityTokenClaims:
     iat: int = 0  # Issued at (Unix timestamp)
     exp: int = 0  # Expires at (Unix timestamp)
     jti: str = ""  # JWT ID (unique token identifier)
+    token_type: str = "capability"  # "capability" or "override"
 
-    # Optional: for override tokens
+    # Optional: for override tokens (must have token_type="override")
     action_hash: str | None = None
     approval_id: str | None = None
 
@@ -64,6 +65,7 @@ class CapabilityTokenClaims:
             "iat": self.iat,
             "exp": self.exp,
             "jti": self.jti,
+            "token_type": self.token_type,
         }
 
         if self.allowed_action_types:
@@ -127,6 +129,7 @@ class CapabilityTokenClaims:
             iat=data.get("iat", 0),
             exp=data.get("exp", 0),
             jti=data.get("jti", ""),
+            token_type=data.get("token_type", "capability"),  # Default to capability for backward compat
             action_hash=data.get("action_hash"),
             approval_id=data.get("approval_id"),
         )
@@ -281,6 +284,7 @@ def create_override_token(
         iat=now,
         exp=now + expires_in_seconds,
         jti=f"override-{secrets.token_hex(8)}",
+        token_type="override",  # Explicitly mark as override token
         action_hash=action_hash,
         approval_id=approval_id,
     )

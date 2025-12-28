@@ -60,7 +60,11 @@ class AuthService:
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
         """Get a user by their ID."""
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        # Load memberships eagerly so legacy routes that rely on user.default_org_id
+        # won't trigger lazy-loading outside the request/session scope.
+        result = await self.db.execute(
+            select(User).options(selectinload(User.memberships)).where(User.id == user_id)
+        )
         return result.scalar_one_or_none()
 
     async def get_user_with_orgs(self, user_id: UUID) -> UserWithOrgsResponse | None:

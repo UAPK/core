@@ -1,16 +1,19 @@
 """Authentication API endpoints."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DbSession
+from app.middleware.rate_limit import limiter
 from app.schemas.auth import LoginRequest, TokenResponse, UserWithOrgsResponse
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+@limiter.limit("10/minute")
 @router.post("/login", response_model=TokenResponse)
 async def login(
+    request_obj: Request,
     data: LoginRequest,
     db: DbSession,
 ) -> TokenResponse:

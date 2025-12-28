@@ -520,12 +520,43 @@ async def ui_approve_action(
     db: DbSession,
     notes: str = Form(""),
 ) -> Response:
-    """Handle approval form submission."""
+    """Handle approval form submission.
+
+    RBAC: Requires OPERATOR, ADMIN, or OWNER role.
+    """
     if user is None:
         return RedirectResponse(url="/ui/login", status_code=302)
 
     if not user.default_org_id:
         return RedirectResponse(url="/ui/approvals", status_code=302)
+
+    # RBAC check: Only OPERATOR+ can approve actions
+    from app.models.membership import MembershipRole
+    from app.services.membership import MembershipService
+
+    membership_service = MembershipService(db)
+    has_permission = await membership_service.user_has_role(
+        org_id=user.default_org_id,
+        user_id=user.id,
+        required_roles=[MembershipRole.OWNER, MembershipRole.ADMIN, MembershipRole.OPERATOR],
+    )
+
+    if not has_permission:
+        approval = await approval_service.get_approval(
+            db=db,
+            org_id=user.default_org_id,
+            approval_id=approval_id,
+        )
+        return templates.TemplateResponse(
+            request=request,
+            name="approval_detail.html",
+            context={
+                "title": f"UAPK Gateway - Approval {approval_id}",
+                "user": user,
+                "approval": approval,
+                "error": "Insufficient permissions. Only operators, admins, and owners can approve actions.",
+            },
+        )
 
     from app.schemas.approval import ApproveRequest
 
@@ -576,12 +607,43 @@ async def ui_deny_action(
     reason: str = Form(""),
     notes: str = Form(""),
 ) -> Response:
-    """Handle denial form submission."""
+    """Handle denial form submission.
+
+    RBAC: Requires OPERATOR, ADMIN, or OWNER role.
+    """
     if user is None:
         return RedirectResponse(url="/ui/login", status_code=302)
 
     if not user.default_org_id:
         return RedirectResponse(url="/ui/approvals", status_code=302)
+
+    # RBAC check: Only OPERATOR+ can deny actions
+    from app.models.membership import MembershipRole
+    from app.services.membership import MembershipService
+
+    membership_service = MembershipService(db)
+    has_permission = await membership_service.user_has_role(
+        org_id=user.default_org_id,
+        user_id=user.id,
+        required_roles=[MembershipRole.OWNER, MembershipRole.ADMIN, MembershipRole.OPERATOR],
+    )
+
+    if not has_permission:
+        approval = await approval_service.get_approval(
+            db=db,
+            org_id=user.default_org_id,
+            approval_id=approval_id,
+        )
+        return templates.TemplateResponse(
+            request=request,
+            name="approval_detail.html",
+            context={
+                "title": f"UAPK Gateway - Approval {approval_id}",
+                "user": user,
+                "approval": approval,
+                "error": "Insufficient permissions. Only operators, admins, and owners can deny actions.",
+            },
+        )
 
     from app.schemas.approval import DenyRequest
 

@@ -52,6 +52,17 @@ class BudgetConfig(BaseModel):
     total_limit: int | None = Field(None, ge=0, description="Total lifetime actions")
 
 
+class ApprovalThreshold(BaseModel):
+    """Configuration for when to require human approval."""
+
+    amount: float | None = Field(None, ge=0, description="Require approval for amounts above this")
+    currency: str | None = Field(None, description="Currency for amount threshold (e.g., 'USD')")
+    action_types: list[str] | None = Field(
+        None, description="Require approval for these action types"
+    )
+    tools: list[str] | None = Field(None, description="Require approval for these tools")
+
+
 class PolicyConfig(BaseModel):
     """Policy configuration for gateway enforcement.
 
@@ -84,6 +95,11 @@ class PolicyConfig(BaseModel):
     # Amount caps (e.g., {"USD": 10000.0})
     amount_caps: dict[str, float] | None = Field(
         None, description="Maximum amounts per currency/unit"
+    )
+
+    # Approval thresholds - actions that require human approval
+    approval_thresholds: ApprovalThreshold | None = Field(
+        None, description="Configuration for actions that require human approval"
     )
 
     # Capability token enforcement
