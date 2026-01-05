@@ -5,8 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
+      - 'website/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -26,23 +25,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
         run: |
-          pip install mkdocs>=1.6.0 mkdocs-material>=9.5.0 pillow cairosvg
+          cd website
+          npm ci
 
       - name: Build documentation
-        run: mkdocs build
+        run: |
+          cd website
+          npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./site
+          path: ./website/build
 
   deploy:
     needs: build
