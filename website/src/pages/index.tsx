@@ -17,11 +17,28 @@ function HomepageHeader() {
           {siteConfig.title}
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <p className="hero__subtitle" style={{marginTop: '1rem', fontSize: '1.1rem'}}>
+          Deploy autonomous AI agents with <strong>hard guardrails</strong>, <strong>human approvals</strong>,
+          and <strong>tamper-evident audit logs</strong> — on one VM, self-hosted.
+        </p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/intro">
-            Docusaurus Tutorial - 5min ⏱️
+            to="/docs/intro"
+            style={{marginRight: '1rem'}}>
+            Get Started
+          </Link>
+          <Link
+            className="button button--primary button--lg"
+            to="/docs/quickstart">
+            Quickstart Guide
+          </Link>
+        </div>
+        <div style={{marginTop: '2rem'}}>
+          <Link
+            className="button button--outline button--lg"
+            to="/docs/business/pilot">
+            Enterprise Pilot Program
           </Link>
         </div>
       </div>
@@ -33,8 +50,8 @@ export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title={`${siteConfig.title}`}
+      description="Policy enforcement and audit logging for AI agents. Deploy autonomous agents with hard guardrails, human approvals, and tamper-evident audit logs.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
