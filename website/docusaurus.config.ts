@@ -41,8 +41,6 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/UAPK/gateway/tree/main/website/',
         },
@@ -52,11 +50,8 @@ const config: Config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
+            'https://github.com/UAPK/gateway/tree/main/website/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
@@ -67,6 +62,12 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
+
+  themes: ['@docusaurus/theme-mermaid'],
+
+  markdown: {
+    mermaid: true,
+  },
 
   themeConfig: {
     // Replace with your project's social card
@@ -87,6 +88,16 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
+        {
+          to: '/docs/quickstart',
+          label: 'Quickstart',
+          position: 'left'
+        },
+        {
+          to: '/docs/business/pilot',
+          label: 'Enterprise',
+          position: 'left'
+        },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/UAPK/gateway',
@@ -99,28 +110,36 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
-              label: 'Tutorial',
-              to: '/docs/intro',
+              label: 'Quickstart',
+              to: '/docs/quickstart',
+            },
+            {
+              label: 'Concepts',
+              to: '/docs/concepts',
+            },
+            {
+              label: 'API Reference',
+              to: '/docs/api',
             },
           ],
         },
         {
-          title: 'Community',
+          title: 'Enterprise',
           items: [
             {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+              label: 'Pilot Program',
+              to: '/docs/business/pilot',
             },
             {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
+              label: 'Pricing',
+              to: '/docs/business/pricing',
             },
             {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
+              label: 'Contact',
+              href: 'mailto:mail@uapk.info',
             },
           ],
         },
@@ -128,12 +147,16 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
+              label: 'GitHub',
+              href: 'https://github.com/UAPK/gateway',
             },
             {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
+              label: 'Security',
+              to: '/docs/security',
+            },
+            {
+              label: 'Blog',
+              to: '/blog',
             },
           ],
         },

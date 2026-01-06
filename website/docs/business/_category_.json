@@ -1,0 +1,8 @@
+{
+  "label": "Enterprise",
+  "position": 8,
+  "link": {
+    "type": "doc",
+    "id": "business/index"
+  }
+}
