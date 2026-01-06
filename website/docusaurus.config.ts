@@ -59,6 +59,10 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+        gtag: {
+          trackingID: 'G-XXXXXXXXXX',
+          anonymizeIP: true,
+        },
       } satisfies Preset.Options,
     ],
   ],
@@ -70,11 +74,13 @@ const config: Config = {
   },
 
   themeConfig: {
-    // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
       respectPrefersColorScheme: true,
     },
+    metadata: [
+      {name: 'keywords', content: 'AI agents, policy enforcement, audit logging, governance, compliance, UAPK'},
+    ],
     navbar: {
       title: 'UAPK Gateway',
       logo: {
