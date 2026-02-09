@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "agent": {
+    "id": "extended-agent",
+    "name": "Extended Agent",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "requested": ["custom_action"]
+  },
+  "extensions": {
+    "custom_vendor": {
+      "feature_flags": ["experimental_mode"],
+      "custom_config": {
+        "timeout": 30
+      }
+    }
+  }
+}

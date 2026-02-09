@@ -17,6 +17,7 @@ from uapk.interpreter import ManifestInterpreter, verify_manifest
 from uapk.policy import init_policy_engine
 from uapk.audit import get_audit_log, AuditLog  # M1.2
 from uapk.cas import ContentAddressedStore
+from uapk.manifest_migrations import migrate_extended_to_canonical, validate_canonical_manifest  # M2.1
 
 
 app = typer.Typer(
@@ -341,6 +342,67 @@ def verify_audit(
     typer.echo(f"  Hash chain: VALID")
     typer.echo(f"  Signatures: VALID ({sig_result['verified_count']} verified)")
     typer.echo(f"  Merkle root: {merkle_root}")
+
+
+@app.command()
+def migrate(
+    manifest: str = typer.Argument(..., help="Path to source manifest (extended schema)"),
+    output: str = typer.Option(None, "--output", "-o", help="Output path for canonical manifest"),
+    validate_only: bool = typer.Option(False, "--validate-only", help="Only validate, don't write output")
+):
+    """
+    M2.1: Migrate OpsPilotOS extended manifest to canonical UAPK Gateway format.
+    Converts corporateModules/aiOsModules structure to canonical agent/capabilities/policy structure.
+    """
+    typer.echo(f"[UAPK MIGRATE] Migrating manifest: {manifest}")
+
+    # Load source manifest
+    try:
+        with open(manifest, 'r') as f:
+            extended = json.load(f)
+    except Exception as e:
+        typer.secho(f"✗ Failed to load manifest: {e}", fg=typer.colors.RED)
+        sys.exit(1)
+
+    # Migrate to canonical
+    try:
+        canonical = migrate_extended_to_canonical(extended)
+    except Exception as e:
+        typer.secho(f"✗ Migration failed: {e}", fg=typer.colors.RED)
+        sys.exit(1)
+
+    # Validate canonical manifest
+    valid, errors = validate_canonical_manifest(canonical)
+    if not valid:
+        typer.secho("✗ Canonical manifest validation failed:", fg=typer.colors.RED)
+        for error in errors:
+            typer.echo(f"  - {error}")
+        sys.exit(1)
+
+    typer.secho("✓ Migration successful", fg=typer.colors.GREEN)
+    typer.echo(f"  Canonical version: {canonical['version']}")
+    typer.echo(f"  Agent ID: {canonical['agent']['id']}")
+    typer.echo(f"  Capabilities: {len(canonical['capabilities']['requested'])} requested")
+
+    # Output
+    if validate_only:
+        typer.echo("  (validate-only mode: no output written)")
+        sys.exit(0)
+
+    if output:
+        output_path = Path(output)
+    else:
+        # Default: same directory, add _canonical suffix
+        manifest_path = Path(manifest)
+        output_path = manifest_path.parent / f"{manifest_path.stem}_canonical{manifest_path.suffix}"
+
+    try:
+        with open(output_path, 'w') as f:
+            json.dump(canonical, f, indent=2)
+        typer.secho(f"✓ Canonical manifest written to: {output_path}", fg=typer.colors.GREEN)
+    except Exception as e:
+        typer.secho(f"✗ Failed to write output: {e}", fg=typer.colors.RED)
+        sys.exit(1)
 
 
 def main():

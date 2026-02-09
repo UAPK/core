@@ -1,0 +1,11 @@
+{
+  "version": "2.0",
+  "agent": {
+    "id": "test",
+    "name": "Test",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "requested": ["test"]
+  }
+}

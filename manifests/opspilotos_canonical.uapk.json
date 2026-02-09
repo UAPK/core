@@ -1,0 +1,624 @@
+{
+  "version": "1.0",
+  "agent": {
+    "id": "opspilotos-v1",
+    "name": "OpsPilotOS",
+    "version": "0.1",
+    "description": "Autonomous SaaS Business-in-a-Box - Self-operating micro-SaaS with content generation, billing, tax/VAT, and NFT business instance minting",
+    "organization": "default",
+    "team": null
+  },
+  "capabilities": {
+    "requested": [
+      "billingagent:create_invoice",
+      "billingagent:read_subscription",
+      "billingagent:write_ledger",
+      "charge_payment_method",
+      "fulfillmentagent:export_pdf",
+      "fulfillmentagent:generate_content",
+      "fulfillmentagent:read_kb",
+      "fulfillmentagent:store_artifact",
+      "intakeagent:read_deliverable_requests",
+      "intakeagent:read_tickets",
+      "intakeagent:update_ticket_status",
+      "mark_invoice_paid",
+      "mint_nft",
+      "policyagent:create_hitl_request",
+      "policyagent:evaluate_policy",
+      "send_customer_email",
+      "send_invoice_email",
+      "sreagent:create_incident",
+      "sreagent:read_metrics",
+      "supportagent:draft_response",
+      "supportagent:read_tickets",
+      "taxagent:compute_vat",
+      "taxagent:generate_vat_report",
+      "taxagent:read_invoices"
+    ]
+  },
+  "constraints": {
+    "max_actions_per_hour": 6000,
+    "max_actions_per_day": 144000,
+    "require_human_approval": [
+      "mint_nft",
+      "send_invoice_email",
+      "mark_invoice_paid",
+      "send_customer_email",
+      "charge_payment_method"
+    ],
+    "allowed_hours": null
+  },
+  "metadata": {
+    "contact": null,
+    "documentation": null,
+    "source": "OpsPilotOS Extended Schema"
+  },
+  "policy": {
+    "budgets": {
+      "mint_nft": {
+        "hourly_limit": 6000,
+        "daily_limit": null,
+        "total_limit": null
+      },
+      "send_invoice_email": {
+        "hourly_limit": 6000,
+        "daily_limit": 500,
+        "total_limit": null
+      },
+      "mark_invoice_paid": {
+        "hourly_limit": 6000,
+        "daily_limit": null,
+        "total_limit": null
+      },
+      "send_customer_email": {
+        "hourly_limit": 6000,
+        "daily_limit": null,
+        "total_limit": null
+      },
+      "charge_payment_method": {
+        "hourly_limit": 6000,
+        "daily_limit": null,
+        "total_limit": null
+      }
+    },
+    "counterparty_allowlist": null,
+    "counterparty_denylist": null,
+    "jurisdiction_allowlist": null,
+    "tool_allowlist": null,
+    "tool_denylist": null,
+    "amount_caps": null,
+    "approval_thresholds": {
+      "action_types": [
+        "mint_nft",
+        "send_invoice_email",
+        "mark_invoice_paid",
+        "send_customer_email",
+        "charge_payment_method"
+      ],
+      "tools": null,
+      "amount": null,
+      "currency": null
+    },
+    "require_capability_token": false
+  },
+  "tools": null,
+  "extensions": {
+    "opspilotos": {
+      "@context": "https://uapk.ai/context/v0.1",
+      "@id": "urn:uapk:opspilotos:v1",
+      "uapkVersion": "0.1",
+      "name": "OpsPilotOS",
+      "description": "Autonomous SaaS Business-in-a-Box - Self-operating micro-SaaS with content generation, billing, tax/VAT, and NFT business instance minting",
+      "executionMode": "dry_run",
+      "cryptoHeader": {
+        "hashAlg": "sha256",
+        "manifestHash": "",
+        "planHash": "",
+        "merkleRoot": "",
+        "signature": "dev-signature-placeholder",
+        "signedBy": "OpsPilotOS-Dev-Key",
+        "signedAt": null
+      },
+      "corporateModules": {
+        "governance": {
+          "roles": [
+            "Owner",
+            "Admin",
+            "Operator",
+            "Viewer"
+          ],
+          "approvalWorkflow": {
+            "defaultApprovers": [
+              "Owner",
+              "Admin"
+            ],
+            "escalationTimeoutMinutes": 60,
+            "requiredApprovals": 1
+          },
+          "auditRetentionDays": 2555
+        },
+        "policyGuardrails": {
+          "toolPermissions": {
+            "IntakeAgent": [
+              "read_deliverable_requests",
+              "read_tickets",
+              "update_ticket_status"
+            ],
+            "FulfillmentAgent": [
+              "read_kb",
+              "generate_content",
+              "export_pdf",
+              "store_artifact"
+            ],
+            "BillingAgent": [
+              "create_invoice",
+              "read_subscription",
+              "write_ledger"
+            ],
+            "TaxAgent": [
+              "read_invoices",
+              "compute_vat",
+              "generate_vat_report"
+            ],
+            "PolicyAgent": [
+              "evaluate_policy",
+              "create_hitl_request"
+            ],
+            "SupportAgent": [
+              "read_tickets",
+              "draft_response"
+            ],
+            "SREAgent": [
+              "read_metrics",
+              "create_incident"
+            ]
+          },
+          "denyRules": [
+            "delete_audit_events",
+            "modify_closed_invoices"
+          ],
+          "rateLimits": {
+            "actionsPerMinute": 100,
+            "invoicesPerDay": 500,
+            "nftMintsPerDay": 10
+          },
+          "liveActionGates": [
+            "mint_nft",
+            "send_invoice_email",
+            "mark_invoice_paid",
+            "send_customer_email",
+            "charge_payment_method"
+          ]
+        },
+        "productOps": {
+          "slas": {
+            "deliverableCompletionHours": 24,
+            "supportResponseHours": 4,
+            "invoiceGenerationHours": 1
+          },
+          "retryPolicy": {
+            "maxRetries": 3,
+            "backoffSeconds": 10
+          },
+          "idempotencyWindowSeconds": 3600
+        },
+        "legalCompliance": {
+          "disclaimers": [
+            "This deliverable was generated by an autonomous AI system. Please review before use.",
+            "OpsPilotOS operates under strict policy controls. All actions are logged and auditable."
+          ],
+          "piiHandling": "encrypt-at-rest",
+          "dpaFlags": {
+            "gdprCompliant": true,
+            "ccpaCompliant": true
+          },
+          "retentionWindows": {
+            "userDataDays": 730,
+            "auditLogsDays": 2555,
+            "invoicesDays": 3650
+          },
+          "dsarWorkflow": "manual-review-required"
+        },
+        "financeOps": {
+          "chartOfAccounts": {
+            "4000": "Revenue - Services",
+            "4100": "Revenue - Subscriptions",
+            "1000": "Accounts Receivable",
+            "2000": "VAT Payable",
+            "3000": "Deferred Revenue"
+          },
+          "invoiceNumberingScheme": "INV-{year}-{seq:05d}",
+          "payoutPolicy": "simulated"
+        },
+        "taxOps": {
+          "jurisdictions": [
+            "EU",
+            "US",
+            "CA",
+            "GB",
+            "AU"
+          ],
+          "vatRules": {
+            "EU_B2B_reverse_charge": true,
+            "EU_B2C_apply_vat": true,
+            "default_vat_rate": 0.19,
+            "vat_rates": {
+              "DE": 0.19,
+              "FR": 0.2,
+              "GB": 0.2,
+              "NL": 0.21,
+              "US": 0.0,
+              "CA": 0.0,
+              "AU": 0.1
+            },
+            "reverse_charge_countries": [
+              "DE",
+              "FR",
+              "GB",
+              "NL",
+              "IT",
+              "ES"
+            ]
+          },
+          "vatIdValidation": "simulated"
+        }
+      },
+      "aiOsModules": {
+        "modelRegistry": {
+          "default": {
+            "provider": "local-stub",
+            "modelId": "deterministic-v1",
+            "endpoint": null,
+            "apiKey": null
+          }
+        },
+        "promptTemplates": {
+          "generate_deliverable": "You are a professional content generator for {project_name}. Using the knowledge base context below, generate a comprehensive deliverable document.\n\nContext:\n{kb_context}\n\nRequest:\n{request_details}\n\nGenerate a well-structured markdown document with sections, key insights, and actionable recommendations.",
+          "support_response": "You are a support agent for OpsPilotOS. Draft a professional response to the following customer inquiry:\n\n{ticket_content}\n\nBe helpful, concise, and professional. If you cannot resolve the issue, escalate it.",
+          "incident_analysis": "Analyze the following system metrics and logs to determine if there is an incident:\n\n{metrics}\n\nProvide a brief assessment and recommended actions."
+        },
+        "rag": {
+          "kbPath": "fixtures/kb",
+          "indexingPolicy": "on-upload",
+          "embeddingModel": "local-stub",
+          "chunkSize": 512,
+          "topK": 5
+        },
+        "agentProfiles": [
+          {
+            "agentId": "intake-agent",
+            "role": "request-monitor",
+            "capabilities": [
+              "monitor_requests",
+              "triage_tickets"
+            ],
+            "allowedTools": [
+              "read_deliverable_requests",
+              "read_tickets",
+              "update_ticket_status"
+            ],
+            "promptTemplates": [],
+            "maxActionsPerMinute": 10
+          },
+          {
+            "agentId": "fulfillment-agent",
+            "role": "content-generator",
+            "capabilities": [
+              "generate_content",
+              "export_documents"
+            ],
+            "allowedTools": [
+              "read_kb",
+              "generate_content",
+              "export_pdf",
+              "store_artifact"
+            ],
+            "promptTemplates": [
+              "generate_deliverable"
+            ],
+            "maxActionsPerMinute": 5
+          },
+          {
+            "agentId": "billing-agent",
+            "role": "invoice-manager",
+            "capabilities": [
+              "generate_invoices",
+              "apply_vat"
+            ],
+            "allowedTools": [
+              "create_invoice",
+              "read_subscription",
+              "write_ledger"
+            ],
+            "promptTemplates": [],
+            "maxActionsPerMinute": 20
+          },
+          {
+            "agentId": "tax-agent",
+            "role": "tax-compliance",
+            "capabilities": [
+              "compute_vat",
+              "generate_reports"
+            ],
+            "allowedTools": [
+              "read_invoices",
+              "compute_vat",
+              "generate_vat_report"
+            ],
+            "promptTemplates": [],
+            "maxActionsPerMinute": 10
+          },
+          {
+            "agentId": "policy-agent",
+            "role": "guardrail-enforcer",
+            "capabilities": [
+              "evaluate_policy",
+              "create_approvals"
+            ],
+            "allowedTools": [
+              "evaluate_policy",
+              "create_hitl_request"
+            ],
+            "promptTemplates": [],
+            "maxActionsPerMinute": 100
+          },
+          {
+            "agentId": "support-agent",
+            "role": "customer-support",
+            "capabilities": [
+              "triage_tickets",
+              "draft_responses"
+            ],
+            "allowedTools": [
+              "read_tickets",
+              "draft_response"
+            ],
+            "promptTemplates": [
+              "support_response"
+            ],
+            "maxActionsPerMinute": 10
+          },
+          {
+            "agentId": "sre-agent",
+            "role": "reliability-monitor",
+            "capabilities": [
+              "monitor_health",
+              "detect_incidents"
+            ],
+            "allowedTools": [
+              "read_metrics",
+              "create_incident"
+            ],
+            "promptTemplates": [
+              "incident_analysis"
+            ],
+            "maxActionsPerMinute": 5
+          }
+        ],
+        "workflows": [
+          {
+            "workflowId": "deliverable_fulfillment_pipeline",
+            "steps": [
+              {
+                "action": "retrieve_request",
+                "agent": "intake-agent"
+              },
+              {
+                "action": "retrieve_kb_context",
+                "agent": "fulfillment-agent"
+              },
+              {
+                "action": "generate_content",
+                "agent": "fulfillment-agent"
+              },
+              {
+                "action": "export_pdf",
+                "agent": "fulfillment-agent"
+              },
+              {
+                "action": "store_artifact",
+                "agent": "fulfillment-agent"
+              },
+              {
+                "action": "trigger_billing",
+                "agent": "billing-agent"
+              }
+            ],
+            "triggers": [
+              "new_deliverable_request"
+            ],
+            "escalationPolicy": "notify-admin-on-failure"
+          },
+          {
+            "workflowId": "subscription_renewal_pipeline",
+            "steps": [
+              {
+                "action": "check_renewals",
+                "agent": "billing-agent"
+              },
+              {
+                "action": "generate_invoice",
+                "agent": "billing-agent"
+              },
+              {
+                "action": "apply_vat",
+                "agent": "tax-agent"
+              },
+              {
+                "action": "send_invoice",
+                "agent": "billing-agent",
+                "gated": true
+              },
+              {
+                "action": "dunning_if_failed",
+                "agent": "billing-agent"
+              }
+            ],
+            "triggers": [
+              "daily_cron"
+            ],
+            "escalationPolicy": "escalate-after-3-failures"
+          },
+          {
+            "workflowId": "vat_reporting_pipeline",
+            "steps": [
+              {
+                "action": "collect_period_invoices",
+                "agent": "tax-agent"
+              },
+              {
+                "action": "validate_vat_fields",
+                "agent": "tax-agent"
+              },
+              {
+                "action": "compute_vat_summary",
+                "agent": "tax-agent"
+              },
+              {
+                "action": "export_report",
+                "agent": "tax-agent"
+              }
+            ],
+            "triggers": [
+              "end_of_month"
+            ],
+            "escalationPolicy": null
+          },
+          {
+            "workflowId": "incident_pipeline",
+            "steps": [
+              {
+                "action": "detect_anomaly",
+                "agent": "sre-agent"
+              },
+              {
+                "action": "create_ticket",
+                "agent": "sre-agent"
+              },
+              {
+                "action": "escalate_critical",
+                "agent": "policy-agent",
+                "gated": true
+              }
+            ],
+            "triggers": [
+              "metric_threshold_exceeded"
+            ],
+            "escalationPolicy": "immediate-escalation-critical"
+          }
+        ],
+        "observability": {
+          "otelEndpoint": null,
+          "metricsPort": 9090,
+          "logLevel": "INFO",
+          "structuredLogs": true
+        }
+      },
+      "saasModules": {
+        "userManagement": {
+          "authMethod": "jwt",
+          "sessionTTLMinutes": 60,
+          "apiKeyEnabled": true
+        },
+        "contentManagement": {
+          "maxProjectsPerOrg": 100,
+          "maxDeliverablesPerProject": 500,
+          "maxKBSizeMB": 100
+        },
+        "billing": {
+          "currency": "EUR",
+          "defaultPlan": "starter",
+          "plans": {
+            "starter": {
+              "priceMonthly": 49,
+              "seats": 5,
+              "deliverables": 100,
+              "pricePerDeliverable": 0.5
+            },
+            "professional": {
+              "priceMonthly": 199,
+              "seats": 20,
+              "deliverables": 500,
+              "pricePerDeliverable": 0.4
+            },
+            "enterprise": {
+              "priceMonthly": 999,
+              "seats": -1,
+              "deliverables": -1,
+              "pricePerDeliverable": 0.3
+            }
+          }
+        },
+        "support": {
+          "ticketingEnabled": true,
+          "slaResponseHours": 4
+        }
+      },
+      "connectors": {
+        "httpApi": {
+          "type": "fastapi",
+          "config": {
+            "host": "0.0.0.0",
+            "port": 8000
+          }
+        },
+        "database": {
+          "type": "sqlite",
+          "config": {
+            "path": "runtime/opspilotos.db"
+          }
+        },
+        "objectStore": {
+          "type": "filesystem",
+          "config": {
+            "basePath": "artifacts"
+          }
+        },
+        "vectorStore": {
+          "type": "sqlite-vector",
+          "config": {
+            "path": "runtime/vectors.db"
+          }
+        },
+        "mailer": {
+          "type": "simulated",
+          "config": {
+            "logPath": "logs/emails.jsonl"
+          }
+        },
+        "payments": {
+          "type": "simulated",
+          "config": {
+            "logPath": "logs/payments.jsonl"
+          }
+        },
+        "nftChain": {
+          "type": "anvil",
+          "config": {
+            "rpcUrl": "http://localhost:8545",
+            "chainId": 31337
+          }
+        },
+        "contentAddressing": {
+          "type": "local-cas",
+          "config": {
+            "basePath": "runtime/cas"
+          }
+        }
+      },
+      "workspaces": {
+        "orgName": "Demo Organization",
+        "adminEmail": "admin@opspilotos.local",
+        "adminPassword": "changeme123"
+      },
+      "ext": {
+        "nftMinting": {
+          "autoMint": false,
+          "requireApproval": true,
+          "contractName": "OpsPilotOSBusinessInstance",
+          "tokenSymbol": "OPSOS"
+        }
+      }
+    }
+  }
+}

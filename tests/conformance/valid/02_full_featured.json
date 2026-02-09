@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "agent": {
+    "id": "full-featured-agent",
+    "name": "Full Featured Agent",
+    "version": "2.5.3",
+    "description": "Agent with all optional fields",
+    "organization": "org-acme",
+    "team": "team-platform"
+  },
+  "capabilities": {
+    "requested": [
+      "read_data",
+      "write_data",
+      "send_email",
+      "create_invoice"
+    ]
+  },
+  "constraints": {
+    "max_actions_per_hour": 1000,
+    "max_actions_per_day": 10000,
+    "require_human_approval": ["send_email", "create_invoice"],
+    "allowed_hours": null
+  },
+  "metadata": {
+    "contact": "platform@acme.com",
+    "documentation": "https://docs.acme.com/agents/full-featured",
+    "source": "Production Deployment"
+  },
+  "policy": {
+    "budgets": {
+      "send_email": {
+        "hourly_limit": 100,
+        "daily_limit": 500,
+        "total_limit": null
+      }
+    },
+    "counterparty_allowlist": ["acme.com", "trusted-partner.com"],
+    "jurisdiction_allowlist": ["US", "EU"],
+    "approval_thresholds": {
+      "action_types": ["send_email"],
+      "amount": 10000.0,
+      "currency": "USD"
+    },
+    "require_capability_token": false
+  },
+  "tools": {
+    "email_service": {
+      "type": "http_request",
+      "config": {
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send"
+      }
+    }
+  }
+}

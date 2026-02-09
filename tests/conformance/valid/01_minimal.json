@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "agent": {
+    "id": "minimal-agent",
+    "name": "Minimal Agent",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "requested": ["read_data"]
+  }
+}
