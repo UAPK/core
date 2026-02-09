@@ -1,0 +1,34 @@
+# Example Variables for OpsPilotOS Template
+# Use with: uapk compile templates/opspilotos.template.jsonld --vars templates/example_vars.yaml
+
+# Business Configuration
+business_name: "My SaaS Business"
+agent_prefix: "mysaas"
+description: "Custom SaaS platform powered by OpsPilotOS"
+
+# Execution Configuration
+execution_mode: "dry_run"  # or "live"
+enable_nft_minting: false
+
+# Rate Limits
+actions_per_minute: 100
+invoices_per_day: 500
+nft_mints_per_day: 10
+
+# SLAs
+deliverable_completion_hours: 24
+escalation_timeout: 60
+audit_retention_days: 2555
+
+# Database Configuration
+database_path: "runtime/mysaas.db"
+
+# LLM Configuration
+llm_provider: "openai"
+llm_model: "gpt-4"
+
+# Environment Variables (referenced but not included here)
+# These should be set in the environment:
+# - OPENAI_API_KEY
+# - STRIPE_API_KEY
+# - DATABASE_PASSWORD
