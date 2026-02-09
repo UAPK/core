@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Local blockchain (Anvil - Foundry's local testnet)
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    command: anvil --host 0.0.0.0 --chain-id 31337
+    ports:
+      - "8545:8545"
+    networks:
+      - opspilotos
+
+  # OpsPilotOS application (build from local)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.opspilotos
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./runtime:/app/runtime
+      - ./artifacts:/app/artifacts
+      - ./logs:/app/logs
+      - ./manifests:/app/manifests
+      - ./fixtures:/app/fixtures
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - anvil
+    networks:
+      - opspilotos
+    command: python -m uapk.cli run manifests/opspilotos.uapk.jsonld
+
+networks:
+  opspilotos:
+    driver: bridge

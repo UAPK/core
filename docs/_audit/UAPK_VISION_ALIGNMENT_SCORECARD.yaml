@@ -1,0 +1,572 @@
+---
+# UAPK Vision Alignment Scorecard (Machine-Readable)
+version: "2.0.0"
+generated_at: "2026-02-08T00:00:00Z"
+evaluation_subject: "OpsPilotOS Reference Implementation"
+comparison_baseline: "UAPK Gateway v0.1 + Canonical Vision Documents"
+evaluator: "Claude Code (Automated Analysis)"
+
+overall:
+  score: 48
+  max: 75
+  percentage: 64
+  grade: "Good"
+  interpretation: "Good foundation with implementation gaps"
+
+pillars:
+  - name: "UAPK Gateway (Enforcement & Operations)"
+    code: "A"
+    vision: "The agent firewall + black box recorder for high-stakes AI - non-bypassable enforcement point with policy, approvals, and tamper-evident audit logs"
+    score: 34
+    max: 45
+    percentage: 76
+    grade: "Strong"
+
+    rubric:
+      0: "No policy enforcement or audit"
+      1: "Basic logging, no real enforcement"
+      3: "Policy checks work, audit log exists, some gaps"
+      5: "Production-grade enforcement, comprehensive audit, HITL, connectors"
+
+    dimensions:
+      - name: "Policy Membrane (Tool Allow/Deny, Rate Limits, Action Gates)"
+        code: "A1"
+        score: 4
+        max: 5
+        current: |
+          PolicyEngine with 5-step evaluation: tool permissions, deny rules, rate limits, live action gates, execution mode constraints.
+          Tool permissions per agent, deny rules for critical actions, rate limiting (100/min, 500 invoices/day, 10 NFT mints/day).
+        target: |
+          15-step policy evaluation with capability tokens, override tokens, amount caps, jurisdiction constraints, counterparty constraints, daily budget caps, structured policy trace.
+        gap: |
+          Missing capability token support (steps 2, 6, 9, 11-13), override token validation (steps 3, 15), amount caps, jurisdiction allowlist, counterparty constraints, daily budget tracking, structured policy trace. Simplified 5-step vs. 15-step evaluation.
+        evidence:
+          - "uapk/policy.py:37-107 (PolicyEngine.evaluate)"
+          - "manifests/opspilotos.uapk.jsonld:30-56 (policyGuardrails)"
+          - "README.md:84-103 (capability tokens)"
+          - "website/docs/architecture/concepts.md:34-54 (capability token spec)"
+        next_action: "Implement capability token validation in PolicyEngine.evaluate() following backend/app/gateway/policy_engine.py pattern. Add CapabilityToken model with scoped constraints (amounts, jurisdictions, counterparties, expiry)."
+
+      - name: "HITL Workflow (Approval Queues, Escalation, Overrides)"
+        code: "A2"
+        score: 4
+        max: 5
+        current: |
+          HITLRequest model with status tracking, approval queue API endpoints, status lifecycle (pending → approved/rejected), approved_by tracking, approval reason recording, integration with policy engine.
+        target: |
+          Approval creates Ed25519-signed override token with approval_id, action_hash, 5-minute expiry. Agent retries with override_token. PolicyEngine validates override token. One-time-use enforced atomically. Approval expiry/timeout (60 min default).
+        gap: |
+          Missing override token generation on approval, Ed25519 signing infrastructure for override tokens, override token validation in PolicyEngine, one-time-use consumption tracking, approval expiry/timeout logic, agent retry mechanism not documented.
+        evidence:
+          - "uapk/api/hitl.py"
+          - "uapk/db/models.py:178-189"
+          - "manifests/opspilotos.uapk.jsonld:22-27 (approval workflow)"
+          - "README.md:236-246 (approval workflow)"
+        next_action: "Implement override token generation in HITLRequest.approve() using Ed25519 signing. Return override token in approval response. Add override_token validation in PolicyEngine step 3."
+
+      - name: "Auditability (Append-Only Logs, Hash-Chaining, Merkle Root, Replay)"
+        code: "A3"
+        score: 4
+        max: 5
+        current: |
+          Append-only JSONL audit log, SHA-256 hash chaining (previousHash), hash chain verification, merkle root computation, tamper-evident design, event types (agent_action, policy_check, system, nft). No Ed25519 signatures, file-only storage, no S3 exports.
+        target: |
+          InteractionRecord model in PostgreSQL with Ed25519 signatures, gateway_signature field, chain verification API endpoint (GET /api/v1/logs/{id}/verify), export audit bundle (POST /api/v1/logs/export), S3 Object Lock for immutable exports, query API, replay capability.
+        gap: |
+          Missing Ed25519 signatures on audit events, database storage (file-only), audit log query API endpoints, chain verification API endpoint, S3 Object Lock export, replay functionality, no JSONL → database sync.
+        evidence:
+          - "uapk/audit.py:18-145"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:138-167"
+          - "website/docs/architecture/concepts.md:74-100"
+          - "README.md:240-247"
+        next_action: "Add Ed25519 signature to each audit event using gateway private key. Sign canonical JSON of event (excluding signature field). Store signature in eventSignature field."
+
+      - name: "Deterministic Execution (Plan Locking, Idempotency, Reproducible Runs)"
+        code: "A4"
+        score: 5
+        max: 5
+        current: |
+          Manifest → plan resolution (uapk/interpreter.py), deterministic plan hashing (SHA-256 canonical JSON), plan.json + plan.lock.json, manifestHash in cryptoHeader, planHash from resolved plan, idempotency window (3600s), retry policy with exponential backoff, same manifest → same planHash.
+        target: |
+          Manifest hash computed and stored, deterministic policy evaluation (no randomness), reproducible runs from same manifest + inputs.
+        gap: |
+          None significant. OpsPilotOS exceeds UAPK Gateway by adding full plan resolution, dual output (plan.json + plan.lock.json), comprehensive hash tracking (manifest + plan + merkle root).
+        evidence:
+          - "uapk/interpreter.py:22-78"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:40-82"
+          - "test_opspilotos.py:103-130"
+          - "README.md:91-95"
+        next_action: "None required. Exemplary implementation. Consider documenting plan resolution algorithm for external evaluators."
+
+      - name: "Observability (Metrics, Logs, Traces, Incident Lifecycle)"
+        code: "A5"
+        score: 4
+        max: 5
+        current: |
+          Health check endpoints (/healthz, /readyz), Prometheus-compatible metrics endpoint (/metrics), structured logging with structlog (JSON), log levels configurable, metrics (opspilotos_events_total counter), SREAgent for incident detection, incident workflow (detect → create_ticket → escalate). No distributed tracing, limited business metrics.
+        target: |
+          /healthz and /readyz (exists), structured logging (exists), Prometheus metrics (exists), distributed tracing with OpenTelemetry (planned), custom business metrics.
+        gap: |
+          Missing OpenTelemetry distributed tracing, limited business metrics (no latency, throughput, error rates per agent/workflow), no metrics dashboard or alerting configuration, SREAgent incident lifecycle incomplete (no auto-remediation).
+        evidence:
+          - "uapk/api/system.py:11-25"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:663-686"
+          - "manifests/opspilotos.uapk.jsonld:203-209"
+          - "README.md:248-249"
+        next_action: "Add business metrics: agent execution latency, workflow completion rate, approval queue depth, policy denial rate. Implement OpenTelemetry tracing for request flows."
+
+      - name: "Connector Framework (Tool Execution, SSRF Protection, External Tools)"
+        code: "A6"
+        score: 2
+        max: 5
+        current: |
+          No ToolConnector abstraction or framework, tools hardcoded in agent code, no external tool execution, no SSRF protection, no webhook/HTTP/custom connectors. Connector config in manifest but not a framework.
+        target: |
+          ToolConnector framework: WebhookConnector, HTTPConnector, MockConnector, custom connectors. SSRF protection (URL allowlist, deny private IPs, TLS verification). Tool execution flow: PolicyEngine → GatewayService.execute_action → ToolConnector.execute → InteractionRecord. Tools configured in manifest with connector type.
+        gap: |
+          Missing entire ToolConnector framework, no external tool execution, no SSRF protection (critical security gap), no webhook/HTTP connectors, tools are hardcoded Python functions not manifest-driven, cannot add custom tools without code changes.
+        evidence:
+          - "manifests/opspilotos.uapk.jsonld:169-202 (connectors - config only)"
+          - "uapk/agents/fulfillment.py:20-54 (hardcoded tools)"
+          - "README.md:27"
+          - "README.md:70-86"
+        next_action: "Implement ToolConnector abstraction with WebhookConnector and HTTPConnector subclasses. Add SSRF protection (allowlist + deny private IPs). Refactor agents to use connector framework."
+
+      - name: "Evidence-Grade Exports (Compliance Bundles, S3 Object Lock)"
+        code: "A7"
+        score: 1
+        max: 5
+        current: |
+          Audit log is JSONL file (runtime/audit.jsonl), no export API endpoint, no bundled export format, no S3 Object Lock integration, no compliance bundle generation.
+        target: |
+          POST /api/v1/logs/export endpoint, export formats (full JSONL, filtered by time/agent/action, bundled with verification metadata), S3 Object Lock for immutable storage, export includes (audit log, manifest snapshot, signature verification keys, chain verification proof).
+        gap: |
+          Missing export API endpoint entirely, no S3 integration, no bundled format with verification metadata, no compliance bundle generation, cannot produce evidence-grade exports for auditors.
+        evidence:
+          - "uapk/audit.py (file-only logging)"
+          - "README.md:242-243"
+        next_action: "Implement POST /api/v1/audit/export endpoint returning tar.gz bundle with: audit.jsonl, manifest.json, verification_proof.json (chain hashes, merkle root, signatures)."
+
+      - name: "Secrets Management (Env Vars, Vault, Rotation)"
+        code: "A8"
+        score: 2
+        max: 5
+        current: |
+          Secret storage model with Fernet encryption, secrets.get_connector_secret() API. Master key hardcoded in codebase, no environment variable integration, no secrets rotation, no external secrets manager (Vault, AWS Secrets Manager).
+        target: |
+          Secrets via environment variables (not hardcoded), never logged or exposed in API, database credentials isolated in .env, optional Vault/AWS Secrets Manager integration, secrets rotation supported.
+        gap: |
+          Master key should be from environment variable (FERNET_KEY), no secrets rotation mechanism, no Vault or external secrets manager integration, connector secrets hardcoded in manifest (should reference secret names).
+        evidence:
+          - "uapk/db/models.py:151-176"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:775-789"
+          - "website/docs/architecture/security.md:63-68"
+        next_action: "Move MASTER_FERNET_KEY to environment variable. Add secrets rotation API endpoint. Document connector secret references (use secret names in manifest, not values)."
+
+      - name: "RBAC (Role-Based Access Control, Scoped Permissions)"
+        code: "A9"
+        score: 3
+        max: 5
+        current: |
+          Four roles defined (Owner, Admin, Operator, Viewer), role descriptions in manifest. RBAC not enforced on API endpoints (JWT auth exists but no role checks), no role-to-permission mapping, no scoped permissions.
+        target: |
+          JWT tokens include role claim, API endpoints enforce role-based access (Owner: full control, Admin: manage users/approve, Operator: create projects/deliverables, Viewer: read-only), role checks in middleware or decorators, audit log records user role.
+        gap: |
+          RBAC defined but not enforced, no role checks on API endpoints, no middleware or decorators for role enforcement, role not included in JWT token claims, cannot restrict actions by role.
+        evidence:
+          - "manifests/opspilotos.uapk.jsonld:20-21"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:369-377"
+          - "website/docs/architecture/security.md:8-16"
+        next_action: "Add role claim to JWT tokens. Implement role check decorators (@require_role('admin')). Enforce RBAC on all API endpoints per role definitions."
+
+  - name: "UAPK Protocol (Canonical Spec & Interoperability)"
+    code: "B"
+    vision: "Standardized manifest format, versioning, conformance, and attestation model for interoperability between UAPK Gateway instances and agent developers"
+    score: 8
+    max: 15
+    percentage: 53
+    grade: "Moderate"
+
+    rubric:
+      0: "No schema or validation"
+      1: "Custom format, no interoperability"
+      3: "Validated schema, some divergence from canonical"
+      5: "Fully conformant, versioned, interoperable with UAPK Gateway"
+
+    dimensions:
+      - name: "Manifest Semantics (JSON-LD Context, Schema, Module Contracts)"
+        code: "B1"
+        score: 2
+        max: 5
+        current: |
+          JSON-LD format with @context, Pydantic schema validation, six module structure (corporateModules, aiOsModules, saasModules). Incompatible with UAPK Gateway canonical schema, complex extended schema (250 lines) vs. simple canonical.
+        target: |
+          Canonical UAPK manifest format with agent object, capabilities.requested array, constraints object. Simple focused schema for interoperability, module contracts defined separately, schema versioning and migration path.
+        gap: |
+          OpsPilotOS manifest diverges significantly from canonical schema. No agent object (uses @id, name, description), no simple capabilities.requested array (uses complex toolPermissions map), no simple constraints object (uses nested policyGuardrails). Cannot load OpsPilotOS manifest in UAPK Gateway without schema changes. No schema migration or compatibility layer.
+        evidence:
+          - "manifests/opspilotos.uapk.jsonld:1-250"
+          - "uapk/manifest_schema.py:1-200"
+          - "website/docs/architecture/concepts.md:5-31"
+        next_action: "Decision required: (1) Converge OpsPilotOS to canonical schema, OR (2) Formalize extended schema and document divergence rationale. Option 1 recommended for interoperability."
+
+      - name: "Versioning (Semantic Versioning, Migrations, Backward-Compat)"
+        code: "B2"
+        score: 2
+        max: 5
+        current: |
+          uapkVersion field exists, cryptoHeader includes version info. No semantic versioning policy documented, no migration framework, no backward compatibility guarantees, version changes require manual manifest editing.
+        target: |
+          Semantic versioning (MAJOR.MINOR.PATCH), migration framework (uapk migrate --from 0.1 --to 0.2), automated field mapping, deprecation warnings. Backward compatibility (Gateway supports manifests from N-1 and N-2 versions), clear breaking change documentation, version negotiation in API.
+        gap: |
+          No versioning policy documented, no migration tooling, no backward compatibility testing, version bumps are manual and error-prone, cannot smoothly upgrade manifests.
+        evidence:
+          - "manifests/opspilotos.uapk.jsonld:4"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:817-845"
+        next_action: "Document semantic versioning policy in docs/protocol/versioning.md. Implement uapk manifest migrate command with 0.1 → 0.2 example migration."
+
+      - name: "Conformance (Validation Rules, Third-Party Verification, Test Suite)"
+        code: "B3"
+        score: 2
+        max: 5
+        current: |
+          uapk verify command validates manifest, Pydantic validation on load. No conformance test suite, no third-party verification workflow, validation rules not documented separately from code.
+        target: |
+          Conformance test suite (tests/conformance/ with 20+ test cases: valid manifests, invalid manifests, edge cases), third-party verification (external validators run tests, uapk conformance-test command, machine-readable results), validation rules documented in specification.
+        gap: |
+          No tests/conformance/ directory, no separate test manifests for validation, validation rules embedded in Pydantic schemas (not documented), third parties cannot verify conformance independently.
+        evidence:
+          - "uapk/cli.py:30-60"
+          - "uapk/manifest_schema.py"
+        next_action: "Create tests/conformance/ directory with 10 valid and 10 invalid manifest examples. Add uapk conformance-test command that runs test suite and reports pass/fail."
+
+      - name: "Attestation Model (Claims, Signatures, Evidence Bundles)"
+        code: "B4"
+        score: 1
+        max: 5
+        current: |
+          Manifest includes cryptoHeader with signature field. Signature is placeholder (dev-signature-placeholder), no real signing implementation, no verification of manifest signatures, no attestation claims model.
+        target: |
+          Manifest signing (Ed25519 signature of canonical JSON excluding cryptoHeader, signature in cryptoHeader.signature, public key in cryptoHeader.signedBy), signature verification (uapk verify --check-signature), attestation claims (who: signedBy, what: manifestHash, when: signedAt, evidence: audit trail/test results).
+        gap: |
+          No real Ed25519 signing implementation, signatures are placeholders (not cryptographically valid), no public key management (registry, distribution), no attestation claims model documented, cannot verify manifest authenticity.
+        evidence:
+          - "manifests/opspilotos.uapk.jsonld:9-17"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:72-81"
+        next_action: "Implement Ed25519 signing in uapk sign manifest.jsonld --key private.pem. Store real signature in cryptoHeader.signature. Add uapk verify --check-signature command."
+
+      - name: "Security Model (Key Mgmt, Revocation, Trust Anchors)"
+        code: "B5"
+        score: 1
+        max: 5
+        current: |
+          No key management framework, keys assumed to exist but not managed, no revocation mechanism, no trust anchors defined.
+        target: |
+          Key management (Ed25519 key pairs via uapk keygen, private keys stored securely, public keys distributed via registry/PKI), revocation (CRL or OCSP, revoked signatures rejected), trust anchors (root signing authorities, chain of trust, configurable trust policy).
+        gap: |
+          No uapk keygen command, no key storage or distribution mechanism, no revocation support, no trust model documented, keys assumed to be managed out-of-band.
+        evidence:
+          - "No key management implementation"
+        next_action: "Implement uapk keygen command to generate Ed25519 key pairs. Document key management best practices in docs/security/key-management.md."
+
+  - name: "UAPK Compiler (Instantiation & Fleet Management)"
+    code: "C"
+    vision: "Turn manifest templates into deployed instances with multi-tenant isolation, upgrade management, and fleet governance at scale"
+    score: 6
+    max: 15
+    percentage: 40
+    grade: "Emerging"
+
+    rubric:
+      0: "Single hardcoded instance"
+      1: "Plan resolution exists"
+      3: "Can deploy multiple instances with manual config"
+      5: "Template engine, multi-tenant factory, fleet governance, automated deployment"
+
+    dimensions:
+      - name: "Template → Instance Compilation"
+        code: "C1"
+        score: 2
+        max: 5
+        current: |
+          Plan resolution (manifest → plan.json + plan.lock.json), deterministic compilation (same manifest → same plan). No template variables or substitution, cannot parameterize manifests, each instance requires separate manifest file.
+        target: |
+          Template manifests with variables ({{business_name}}, {{agent_prefix}}, {{DATABASE_URL}}), compilation command (uapk compile template.jsonld --vars vars.yaml --output instance.jsonld), variable substitution with validation (type checking, required vars), template library (docs/templates/).
+        gap: |
+          No template variable syntax (Jinja2, Mustache), no variable substitution engine, no uapk compile command, cannot create multiple instances from one template, each instance needs manual manifest duplication and editing.
+        evidence:
+          - "uapk/interpreter.py:22-78"
+          - "manifests/opspilotos.uapk.jsonld (single instance)"
+        next_action: "Implement template variable substitution using Jinja2. Add uapk compile command that accepts template + vars file and produces instance manifest."
+
+      - name: "Multi-Tenant Isolation (Namespaces, Storage, Policy Inheritance)"
+        code: "C2"
+        score: 2
+        max: 5
+        current: |
+          Organization model exists, users belong to organizations (multi-tenant data model). No namespace isolation for deployed instances, storage not namespaced (shared artifacts/ directory), database tables not namespaced, policy not inherited.
+        target: |
+          Namespace isolation (each instance in separate namespace, storage isolated artifacts/{instance_id}/), database isolation (separate database per instance OR shared with org_id filtering), policy inheritance (global → instance → agent hierarchy), resource quotas per instance (CPU, memory, disk).
+        gap: |
+          No namespace concept in deployment, storage shared across instances (collision risk), database shared without clear isolation (org_id not consistently enforced), no policy inheritance model, no resource quotas or limits per instance.
+        evidence:
+          - "uapk/db/models.py (Organization model)"
+          - "Single runtime/ directory (no instance isolation)"
+        next_action: "Implement instance namespacing: runtime/{instance_id}/, artifacts/{instance_id}/. Add instance_id to all database queries for multi-tenant isolation."
+
+      - name: "Upgrade Manifests / Migrations / Rollout Strategy"
+        code: "C3"
+        score: 0
+        max: 5
+        current: |
+          No upgrade mechanism, manifest changes require manual editing and re-deploy, no migration scripts or tooling, no rollout strategy (blue/green, canary, rolling).
+        target: |
+          Upgrade workflow (create new manifest version, run uapk upgrade instance-001 --manifest v0.2.jsonld, compute diff, run migrations, deploy with rollout strategy), rollout strategies (blue/green, canary, rolling with health checks), rollback (uapk rollback instance-001).
+        gap: |
+          No uapk upgrade command, no rollout strategy implementation, no rollback capability, upgrades are manual and risky, no migration script framework.
+        evidence:
+          - "No upgrade implementation"
+          - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md:832-845 (mentions upgrade path but no tooling)"
+        next_action: "Design upgrade workflow and implement uapk upgrade command with manifest diff, migration execution, and rollback support."
+
+      - name: "Packaging + Deployment (OCI Images, SBOM, Provenance)"
+        code: "C4"
+        score: 2
+        max: 5
+        current: |
+          Docker Compose deployment exists. No OCI image publishing, no SBOM, no provenance attestation (SLSA), no container registry integration.
+        target: |
+          OCI image packaging (uapk package manifest.jsonld --output image.tar, produces OCI-compliant image with manifest embedded + runtime binaries + dependencies), SBOM generation (CycloneDX or SPDX format), provenance attestation (SLSA Level 2+, build attestation), container registry (push to Docker Hub/GitHub Packages, signed images with Sigstore/Cosign).
+        gap: |
+          No uapk package command, no OCI image building, no SBOM generation, no provenance attestation, manual Docker Compose deployment only.
+        evidence:
+          - "docker-compose.opspilotos.yml"
+          - "scripts/ (deployment scripts but no packaging)"
+        next_action: "Implement uapk package command to build OCI image with embedded manifest. Generate SBOM using pip-licenses or syft."
+
+      - name: "Fleet Governance (Policies at Scale, Audits, Drift Detection)"
+        code: "C5"
+        score: 0
+        max: 5
+        current: |
+          Single instance deployment only, no fleet registry or instance tracking, no fleet-level policies, no drift detection, no centralized audit aggregation across instances.
+        target: |
+          Fleet registry (database/API tracking all deployed instances with metadata: ID, manifest hash, status, health, last seen), fleet governance (global policies enforced across instances, compliance reports aggregated, centralized audit trail aggregation), drift detection (detect manifest divergence, alert on drift, uapk fleet drift command), fleet operations (uapk fleet list/status/upgrade commands).
+        gap: |
+          No fleet concept implemented, cannot deploy or manage multiple instances, no fleet registry or instance tracking, no drift detection capability, single-instance-only mindset in current code.
+        evidence:
+          - "No fleet implementation"
+          - "Inference: UAPK Gateway's org-based multi-agent model implies fleet capability"
+        next_action: "Design fleet architecture: centralized registry + federated instances. Implement uapk fleet init command to set up registry. Add instance registration on startup."
+
+top_gaps:
+  - rank: 1
+    dimension: "A6"
+    name: "Missing Connector Framework"
+    score: 2
+    max: 5
+    impact: "CRITICAL"
+    description: "No ToolConnector abstraction, SSRF protection, or external tool execution capability"
+    timeline: "1 week (Milestone 1.3)"
+
+  - rank: 2
+    dimension: "B1"
+    name: "Schema Divergence"
+    score: 2
+    max: 5
+    impact: "HIGH"
+    description: "OpsPilotOS manifest incompatible with UAPK Gateway canonical schema"
+    timeline: "2 weeks (Milestone 2.1)"
+
+  - rank: 3
+    dimension: "A2"
+    name: "No Override Tokens"
+    score: 4
+    max: 5
+    impact: "HIGH"
+    description: "Approvals don't generate Ed25519-signed tokens for retry"
+    timeline: "3 days (Milestone 1.1)"
+
+  - rank: 4
+    dimension: "A3"
+    name: "Missing Ed25519 Audit Signatures"
+    score: 4
+    max: 5
+    impact: "HIGH"
+    description: "Audit events lack gateway signatures"
+    timeline: "2 days (Milestone 1.2)"
+
+  - rank: 5
+    dimension: "C5"
+    name: "No Fleet Management"
+    score: 0
+    max: 5
+    impact: "MEDIUM"
+    description: "Cannot deploy or govern multiple instances"
+    timeline: "2 weeks (Milestone 3.2)"
+
+milestones:
+  - number: 1
+    name: "Gateway Hardening Baseline"
+    duration: "2-3 weeks"
+    goal: "Close critical security gaps"
+    target_score: 54
+    target_percentage: 72
+
+    deliverables:
+      - "Implement override token flow with Ed25519 signing"
+      - "Add Ed25519 signatures to audit events"
+      - "Implement ToolConnector framework with SSRF protection"
+      - "Enforce RBAC on all endpoints"
+      - "Move secrets to environment variables"
+
+    acceptance_criteria:
+      - "Override tokens generated on approval and validated in PolicyEngine"
+      - "Audit events signed with gateway Ed25519 key, verification passes"
+      - "WebhookConnector and HTTPConnector implemented with allowlist + private IP deny"
+      - "Role checks enforced on all API endpoints, unauthorized requests return 403"
+      - "MASTER_FERNET_KEY loaded from environment, not hardcoded"
+
+    score_improvements:
+      A2: +1  # 4→5 (override tokens)
+      A3: +1  # 4→5 (Ed25519 signatures)
+      A6: +2  # 2→4 (connector framework)
+      A8: +1  # 2→3 (env var secrets)
+      A9: +1  # 3→4 (RBAC enforcement)
+
+  - number: 2
+    name: "Protocol Formalization + Conformance Suite"
+    duration: "3-4 weeks"
+    goal: "Standardize manifest and enable interoperability"
+    target_score: 58
+    target_percentage: 77
+
+    deliverables:
+      - "Schema convergence (canonical OR formalized extended)"
+      - "Conformance test suite (20+ tests)"
+      - "Versioning policy and migration framework"
+      - "Manifest signing and verification (Ed25519)"
+      - "Evidence-grade S3 exports"
+
+    acceptance_criteria:
+      - "OpsPilotOS manifest loads in UAPK Gateway OR migration tool exists"
+      - "tests/conformance/ with 20+ test cases, uapk conformance-test command passes"
+      - "docs/protocol/versioning.md published, uapk migrate command works"
+      - "uapk sign and uapk verify --check-signature commands work"
+      - "POST /api/v1/audit/export returns tar.gz with audit log + manifest + proof"
+
+    score_improvements:
+      B1: +2  # 2→4 (schema convergence)
+      B2: +1  # 2→3 (versioning)
+      B3: +1  # 2→3 (conformance)
+      B4: +1  # 1→2 (signing)
+      A7: +1  # 1→2 (exports)
+
+  - number: 3
+    name: "Compiler & Fleet Management"
+    duration: "6-8 weeks"
+    goal: "Enable multi-instance deployment and fleet governance"
+    target_score: 65
+    target_percentage: 87
+
+    deliverables:
+      - "Template variable substitution (Jinja2)"
+      - "Multi-instance deployment with namespacing"
+      - "Fleet registry with status tracking"
+      - "Drift detection and remediation"
+      - "Upgrade/rollback mechanism"
+
+    acceptance_criteria:
+      - "uapk compile template.jsonld --vars vars.yaml produces instance manifest"
+      - "runtime/{instance_id}/ and artifacts/{instance_id}/ namespacing works"
+      - "uapk fleet list shows all deployed instances with health status"
+      - "uapk fleet drift detects manifest divergence"
+      - "uapk upgrade and uapk rollback commands work"
+
+    score_improvements:
+      C1: +2  # 2→4 (template compilation)
+      C2: +2  # 2→4 (multi-tenant isolation)
+      C3: +3  # 0→3 (upgrades)
+      C4: +1  # 2→3 (packaging)
+      C5: +3  # 0→3 (fleet)
+
+strategic_options:
+  - option: "A"
+    name: "Converge to Canonical UAPK"
+    recommendation: "Recommended"
+    outcome: "Full alignment with UAPK ecosystem, interoperability with other UAPK Gateway instances"
+    timeline: "11-15 weeks (Milestones 1-3)"
+    approach:
+      - "Adopt UAPK Gateway's simple manifest schema"
+      - "Implement full 15-step policy engine with capability tokens"
+      - "Add connector framework with SSRF protection"
+      - "Store audit log in database with Ed25519 signatures"
+      - "Add fleet management and template compilation"
+
+  - option: "B"
+    name: "Formalize Extended Schema"
+    recommendation: "Alternative"
+    outcome: "Preserves OpsPilotOS innovations while acknowledging divergence"
+    timeline: "8-12 weeks (Milestones 1, 2B, 3)"
+    approach:
+      - "Document OpsPilotOS extended schema as UAPK-Extended v0.1"
+      - "Provide schema migration tool: canonical ↔ extended"
+      - "Maintain compatibility layer"
+      - "Position as business-focused UAPK variant"
+
+  - option: "C"
+    name: "Hybrid Approach"
+    recommendation: "Pragmatic"
+    outcome: "Balances interoperability with OpsPilotOS innovations"
+    timeline: "10-14 weeks"
+    approach:
+      - "Implement gateway-critical components (Milestone 1)"
+      - "Converge on core manifest structure (Milestone 2A)"
+      - "Keep extended modules as optional extensions"
+      - "Add compiler/fleet capabilities (Milestone 3)"
+
+interpretation:
+  evaluation_demo: "64% is good - shows the vision works"
+  production_deployment: "64% needs improvement - close critical gaps first"
+  ecosystem_adoption: "64% is insufficient - schema convergence required"
+
+strengths:
+  - "Deterministic execution (5/5) - exemplary plan locking"
+  - "Policy enforcement (4/5) - solid governance with 5-step evaluation"
+  - "Audit trail (4/5) - SHA-256 hash chaining with merkle root"
+  - "HITL workflow (4/5) - functional approval queue"
+  - "Observability (4/5) - health checks, metrics, structured logging"
+  - "Domain innovation - tax/VAT, billing, NFT minting extend UAPK vision"
+
+weaknesses:
+  - "Missing connector framework (2/5) - security gap, no SSRF protection"
+  - "Schema divergence (2/5) - interoperability blocker"
+  - "No override tokens (4/5) - approval workflow incomplete"
+  - "No Ed25519 signatures (4/5) - evidence-grade logging incomplete"
+  - "No fleet management (0/5) - cannot scale beyond single instance"
+  - "Secrets hardcoded (2/5) - should use environment variables"
+
+methodology:
+  documents_analyzed:
+    - "README.md (UAPK Gateway overview)"
+    - "website/docs/architecture/*.md"
+    - "DLTEST/UAPK_BUSINESS_INSTANCE_CERTIFICATE.md"
+    - "DLTEST/SYSTEM_ARCHITECTURE_DIAGRAM.md"
+    - "manifests/opspilotos.uapk.jsonld"
+
+  scoring_approach:
+    - "0-5 scale per dimension (19 dimensions total)"
+    - "Evidence-based: every score backed by file references"
+    - "Conservative: when uncertain, scored lower"
+    - "Consistent: same rubric applied across all dimensions"
+
+  inference_policy:
+    - "Explicit vision: Direct statements from README.md or docs"
+    - "Inferred vision: Logical extensions clearly labeled"
+    - "All inferences explained in Target State sections"
+
+  limitations:
+    - "Scorecard reflects current state as of 2026-02-08"
+    - "No runtime testing (static code analysis only)"
+    - "Some gaps may be documented elsewhere (out of scope)"
+    - "Scoring relative to UAPK Gateway v0.1 vision"

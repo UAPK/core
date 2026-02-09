@@ -1,0 +1,18 @@
+{
+  "title": "Cloud Migration Strategy Report",
+  "description": "Generate a comprehensive report on cloud migration strategy for a mid-sized enterprise",
+  "request_details": {
+    "company_size": "500 employees",
+    "current_infrastructure": "On-premise data center",
+    "target": "Multi-cloud (AWS + Azure)",
+    "timeline": "18 months",
+    "budget": "$2M",
+    "key_concerns": [
+      "Minimize downtime",
+      "Security compliance (SOC2, HIPAA)",
+      "Cost optimization",
+      "Staff training"
+    ],
+    "deliverable_format": "Executive summary + technical implementation plan"
+  }
+}
