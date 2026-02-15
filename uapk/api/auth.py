@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
+import bcrypt
 
 from uapk.db import get_session
 from uapk.db.models import User
@@ -17,7 +17,6 @@ from uapk.db.models import User
 from uapk.core.secrets import get_jwt_secret_key
 
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 # JWT settings
@@ -55,11 +54,11 @@ class TokenResponse(BaseModel):
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
 
 
 def create_access_token(data: dict, user: User = None, session: Any = None) -> str:

@@ -11,7 +11,6 @@ from uapk.manifest_schema import UAPKManifest
 from uapk.db import init_db, get_session
 from uapk.policy import init_policy_engine
 from uapk.tax import init_tax_calculator
-from uapk.api import auth, organizations, projects, deliverables, billing, hitl, nft_routes, metrics
 
 
 # Global manifest (set during startup)
@@ -43,6 +42,9 @@ def create_app(manifest: UAPKManifest) -> FastAPI:
     """Create FastAPI application with loaded manifest"""
     global _manifest
     _manifest = manifest
+
+    # Import routers after manifest is set (avoids circular import)
+    from uapk.api import auth, organizations, projects, deliverables, billing, hitl, nft_routes, metrics
 
     # Initialize subsystems
     init_policy_engine(manifest)
