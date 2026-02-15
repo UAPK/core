@@ -34,7 +34,6 @@ from app.schemas.interaction_record import (
     InteractionRecordList,
     InteractionRecordQuery,
     InteractionRecordResponse,
-    PolicyEvaluation,
 )
 from app.schemas.manifest import (
     AgentInfo,
@@ -106,7 +105,6 @@ __all__ = [
     "InteractionRecordList",
     "InteractionRecordQuery",
     "InteractionRecordResponse",
-    "PolicyEvaluation",
     # Manifest
     "AgentInfo",
     "CapabilityDeclaration",

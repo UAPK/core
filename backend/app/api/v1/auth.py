@@ -10,10 +10,10 @@ from app.services.auth import AuthService
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@limiter.limit("10/minute")
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def login(
-    request_obj: Request,
+    request: Request,
     data: LoginRequest,
     db: DbSession,
 ) -> TokenResponse:

@@ -93,3 +93,10 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Runtime data (not for git)
+runtime/
+*.db
+audit.jsonl
+.env.production
+*.pem

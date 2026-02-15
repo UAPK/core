@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "name": "manifest.jsonld",
+      "hash": "0027ca30cd98932cc2ecbd8dd280f12d8813d57dd281d615deca303c50158199",
+      "uri": "cas://0027ca30cd98932cc2ecbd8dd280f12d8813d57dd281d615deca303c50158199"
+    },
+    {
+      "name": "plan.lock.json",
+      "hash": "1e1e7f8d40785104febf4f3278e8f67ed233fb3f5b6300ff2aabb38bb29d557c",
+      "uri": "cas://1e1e7f8d40785104febf4f3278e8f67ed233fb3f5b6300ff2aabb38bb29d557c"
+    }
+  ],
+  "created_at": "2026-02-10T14:07:35.932210Z",
+  "packageHash": "98afd32488bd2b3696b6c4bda275314ce69eb442ea78c31853a19ad9445c2219"
+}
