@@ -1,0 +1,23 @@
+[Unit]
+Description=UAPK Compiler Service
+After=network.target
+
+[Service]
+Type=simple
+User=uapk
+WorkingDirectory=/opt/uapk
+EnvironmentFile=/opt/uapk/.env
+
+# Run compiler in API mode (future: HTTP API for remote compilation)
+# For now, this is a placeholder; actual compilation happens via CLI
+ExecStart=/usr/bin/python3 -m uapk.compiler.api
+
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=append:/var/log/uapk/compiler.log
+StandardError=append:/var/log/uapk/compiler.log
+
+[Install]
+WantedBy=multi-user.target

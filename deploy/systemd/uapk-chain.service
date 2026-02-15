@@ -1,0 +1,21 @@
+[Unit]
+Description=UAPK Local Blockchain (Anvil)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=uapk
+WorkingDirectory=/opt/uapk
+EnvironmentFile=/opt/uapk/.env
+ExecStart=/usr/bin/docker compose -f /opt/uapk/docker-compose.chain.yml up
+ExecStop=/usr/bin/docker compose -f /opt/uapk/docker-compose.chain.yml down
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=append:/var/log/uapk/chain.log
+StandardError=append:/var/log/uapk/chain.log
+
+[Install]
+WantedBy=multi-user.target

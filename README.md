@@ -178,6 +178,85 @@ curl -fsS http://localhost:8000/readyz
 
 ---
 
+## VM Transformator MVP
+
+Transform your VM into a **UAPK Compiler/Transformator node** for compiling business templates, packaging instances, and minting NFTs.
+
+### 7-Command Workflow
+
+#### 1. Compile - Convert templates to instances
+
+```bash
+python3 -m uapk.cli compile templates/minimal_business.template.jsonld \
+  --params templates/example_vars.yaml \
+  --out /var/lib/uapk/instances/my-business
+```
+
+#### 2. Plan - Generate deterministic execution plan
+
+```bash
+python3 -m uapk.cli plan /var/lib/uapk/instances/my-business/manifest.jsonld \
+  --lock plan.lock.json
+```
+
+#### 3. Package - Create CAS-indexed bundle
+
+```bash
+python3 -m uapk.cli package /var/lib/uapk/instances/my-business --format zip
+```
+
+#### 4. Chain - Start local blockchain
+
+```bash
+python3 -m uapk.cli chain up
+```
+
+#### 5. Deploy - Deploy NFT contract
+
+```bash
+python3 -m uapk.cli nft deploy --network local
+```
+
+#### 6. Mint - Mint business instance NFT (with approval)
+
+```bash
+# Request mint
+python3 -m uapk.cli mint /var/lib/uapk/instances/my-business \
+  --network local --require-approval
+
+# Approve request
+python3 -m uapk.cli hitl approve <request-id>
+
+# Mint with override token
+python3 -m uapk.cli mint /var/lib/uapk/instances/my-business \
+  --network local --override-token <token>
+```
+
+#### 7. Run - Execute the instance
+
+```bash
+python3 -m uapk.cli run --instance my-business
+```
+
+### Quick Start
+
+Run the complete E2E demo:
+
+```bash
+./scripts/e2e_vm_transformator_demo.sh
+```
+
+### Full Documentation
+
+See [VM Transformator MVP Deployment Guide](docs/deployment/vm_transformator_mvp.md) for:
+- Prerequisites and installation
+- Environment configuration
+- Systemd service setup
+- Troubleshooting
+- Architecture details
+
+---
+
 ## Demo in 60 seconds
 
 Load example manifests ("47ers") and run a simulated tool call.

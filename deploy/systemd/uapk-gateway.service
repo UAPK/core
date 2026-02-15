@@ -1,26 +1,23 @@
 [Unit]
-Description=UAPK Gateway
-Documentation=https://github.com/example/uapk-gateway
-After=docker.service
-Requires=docker.service
+Description=UAPK Gateway API Server
+After=network.target uapk-chain.service
+Wants=uapk-chain.service
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/uapk-gateway
-ExecStartPre=/usr/bin/docker compose pull
-ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml up
-ExecStop=/usr/bin/docker compose down
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+User=uapk
+WorkingDirectory=/opt/uapk
+EnvironmentFile=/opt/uapk/.env
 
-# Security hardening
-NoNewPrivileges=yes
-ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=/opt/uapk-gateway
+# Run the gateway API (serves compiled instances)
+ExecStart=/usr/bin/python3 -m uapk.cli run manifests/opspilotos.uapk.jsonld
+
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=append:/var/log/uapk/gateway.log
+StandardError=append:/var/log/uapk/gateway.log
 
 [Install]
 WantedBy=multi-user.target
