@@ -29,6 +29,13 @@ from app.schemas.invoice import (
     InvoiceSummary,
     InvoiceUpdateStatus,
 )
+from app.schemas.lead import (
+    LeadCreate,
+    LeadListResponse,
+    LeadResponse,
+    LeadStats,
+    LeadUpdate,
+)
 from app.schemas.auth import (
     LoginRequest,
     OrgMembershipInfo,
@@ -167,6 +174,12 @@ __all__ = [
     "InvoiceResponse",
     "InvoiceSummary",
     "InvoiceUpdateStatus",
+    # Lead
+    "LeadCreate",
+    "LeadListResponse",
+    "LeadResponse",
+    "LeadStats",
+    "LeadUpdate",
     # Gateway
     "ActionInfo",
     "ApprovalStatus",

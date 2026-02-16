@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact UAPK Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            padding: 2rem;
+        }
+
+        .contact-form {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .form-header p {
+            color: #64748b;
+            font-size: 1.05rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #334155;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 1rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .submit-button:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .submit-button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .privacy {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-message h3 {
+            font-size: 1.8rem;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .success-message p {
+            font-size: 1.1rem;
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        .error-message {
+            padding: 1rem;
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            border-radius: 6px;
+            color: #991b1b;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="contact-form">
+        <div id="form-container">
+            <div class="form-header">
+                <h2>Ready to Deploy Agents Safely?</h2>
+                <p>Get expert help from a lawyer-developer who built this for real-world compliance needs.</p>
+            </div>
+
+            <form id="contact-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Your Name *</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company/Firm *</label>
+                        <input type="text" name="company" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Role</label>
+                        <select name="role">
+                            <option value="">Select role...</option>
+                            <option value="General Counsel">General Counsel</option>
+                            <option value="Compliance Officer">Compliance Officer</option>
+                            <option value="CTO">CTO / Engineering Lead</option>
+                            <option value="Partner">Partner (Law Firm)</option>
+                            <option value="CEO">CEO / Founder</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>What do you want to deploy? *</label>
+                    <textarea name="use_case" rows="4"
+                              placeholder="e.g., Settlement negotiation agent for IP litigation cases"
+                              required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Timeline</label>
+                        <select name="timeline">
+                            <option value="Immediate">Immediate (this month)</option>
+                            <option value="Next Quarter">Next Quarter</option>
+                            <option value="Exploring">Just Exploring</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Budget Range</label>
+                        <select name="budget">
+                            <option value="$15K-$25K">$15K-$25K (Pilot)</option>
+                            <option value="$5K-$10K">$5K-$10K (Blueprint)</option>
+                            <option value="$50K+">$50K+ (Multiple workflows)</option>
+                            <option value="Not sure">Not sure yet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="error-message" class="error-message hidden"></div>
+
+                <button type="submit" class="submit-button">Get Expert Review</button>
+
+                <p class="privacy">
+                    🔒 Your information is secure. We'll never share it with third parties.
+                </p>
+            </form>
+        </div>
+
+        <div id="success-container" class="hidden">
+            <div class="success-message">
+                <div class="success-icon">✅</div>
+                <h3>Request Received!</h3>
+                <p id="success-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://34.171.83.82:8000/api/v1/leads';
+
+        document.getElementById('contact-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const submitButton = form.querySelector('.submit-button');
+            const errorDiv = document.getElementById('error-message');
+
+            // Disable button
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+            errorDiv.classList.add('hidden');
+
+            // Get form data
+            const formData = new FormData(form);
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                company: formData.get('company'),
+                role: formData.get('role') || null,
+                use_case: formData.get('use_case'),
+                timeline: formData.get('timeline') || null,
+                budget: formData.get('budget') || null,
+                interest_type: 'pilot',
+                source: 'website'
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to submit form');
+                }
+
+                // Success!
+                document.getElementById('form-container').classList.add('hidden');
+                document.getElementById('success-container').classList.remove('hidden');
+                document.getElementById('success-text').textContent =
+                    "Thank you! We'll contact you within 24 hours. Check your email for next steps.";
+
+            } catch (error) {
+                errorDiv.textContent = 'Something went wrong. Please try again or email us at mail@uapk.info';
+                errorDiv.classList.remove('hidden');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Get Expert Review';
+            }
+        });
+    </script>
+</body>
+</html>

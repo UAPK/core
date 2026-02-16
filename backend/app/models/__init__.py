@@ -8,6 +8,7 @@ from app.models.capability_token import CapabilityToken
 from app.models.interaction_record import Decision, InteractionRecord
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
+from app.models.lead import Lead
 from app.models.ledger_entry import LedgerEntry
 from app.models.membership import Membership, MembershipRole
 from app.models.organization import Organization
@@ -30,6 +31,7 @@ __all__ = [
     "Invoice",
     "InvoiceItem",
     "IssuerStatus",
+    "Lead",
     "LedgerEntry",
     "ManifestStatus",
     "Membership",

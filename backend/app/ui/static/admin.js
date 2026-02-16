@@ -44,6 +44,7 @@ function switchTab(tabName) {
 
     // Load data for tab
     if (tabName === 'dashboard') loadDashboard();
+    else if (tabName === 'leads') loadLeads();
     else if (tabName === 'clients') loadClients();
     else if (tabName === 'invoices') loadInvoices();
 }
@@ -80,23 +81,29 @@ async function loadDashboard() {
         // Load summary stats
         summary = await apiCall('/invoices/summary');
 
-        // Load recent clients and invoices
-        const [clientsData, invoicesData] = await Promise.all([
+        // Load recent clients, invoices, and lead stats
+        const [clientsData, invoicesData, leadStats] = await Promise.all([
             apiCall('/clients?page=1&page_size=5'),
-            apiCall('/invoices?page=1&page_size=5')
+            apiCall('/invoices?page=1&page_size=5'),
+            apiCall('/leads/stats')
         ]);
 
-        renderDashboard(clientsData, invoicesData);
+        renderDashboard(clientsData, invoicesData, leadStats);
     } catch (error) {
         showError('dashboard-panel', 'Failed to load dashboard');
     }
 }
 
-function renderDashboard(clientsData, invoicesData) {
+function renderDashboard(clientsData, invoicesData, leadStats) {
     const panel = document.getElementById('dashboard-panel');
 
     panel.innerHTML = `
         <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">New Leads</div>
+                <div class="stat-value" style="color: var(--primary)">${leadStats.new_leads}</div>
+                <div class="stat-change">Qualified: ${leadStats.qualified_leads}</div>
+            </div>
             <div class="stat-card">
                 <div class="stat-label">Total Revenue</div>
                 <div class="stat-value">€${summary.total_revenue.toFixed(2)}</div>
@@ -104,10 +111,6 @@ function renderDashboard(clientsData, invoicesData) {
             <div class="stat-card">
                 <div class="stat-label">Outstanding</div>
                 <div class="stat-value">€${summary.total_outstanding.toFixed(2)}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Invoices</div>
-                <div class="stat-value">${summary.total_invoices}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Active Clients</div>
@@ -411,4 +414,157 @@ function renderEmptyState(title, message) {
             <p class="text-muted">${message}</p>
         </div>
     `;
+}
+
+// Leads Management
+async function loadLeads() {
+    showLoading('leads-panel');
+
+    try {
+        const [leadsData, stats] = await Promise.all([
+            apiCall('/leads?page=1&page_size=100'),
+            apiCall('/leads/stats')
+        ]);
+        window.leads = leadsData.leads;
+        window.leadStats = stats;
+        renderLeads();
+    } catch (error) {
+        showError('leads-panel', 'Failed to load leads');
+    }
+}
+
+function renderLeads() {
+    const panel = document.getElementById('leads-panel');
+    const leads = window.leads || [];
+    const stats = window.leadStats || {};
+
+    panel.innerHTML = `
+        <div class="stats-grid mb-20">
+            <div class="stat-card">
+                <div class="stat-label">New Leads</div>
+                <div class="stat-value">${stats.new_leads || 0}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Qualified</div>
+                <div class="stat-value">${stats.qualified_leads || 0}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Won (Converted)</div>
+                <div class="stat-value">${stats.won_leads || 0}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Conversion Rate</div>
+                <div class="stat-value">${(stats.conversion_rate || 0).toFixed(1)}%</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Sales Pipeline</h2>
+            </div>
+            <div class="card-body">
+                ${leads.length > 0 ? renderLeadsTable(leads) : renderEmptyState('No leads yet', 'Waiting for website visitors to submit contact form')}
+            </div>
+        </div>
+    `;
+}
+
+function renderLeadsTable(leadsList) {
+    return `
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Contact</th>
+                    <th>Company</th>
+                    <th>Use Case</th>
+                    <th>Budget</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${leadsList.map(lead => `
+                    <tr>
+                        <td>${formatDate(lead.created_at)}</td>
+                        <td>
+                            <strong>${escapeHtml(lead.name)}</strong><br>
+                            <small class="text-muted">${escapeHtml(lead.email)}</small>
+                        </td>
+                        <td>${escapeHtml(lead.company)}</td>
+                        <td style="max-width:250px; font-size:13px">${escapeHtml(lead.use_case.substring(0, 80))}${lead.use_case.length > 80 ? '...' : ''}</td>
+                        <td>${escapeHtml(lead.budget || '-')}</td>
+                        <td>${renderLeadStatusBadge(lead.status)}</td>
+                        <td>
+                            ${renderLeadActions(lead)}
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderLeadStatusBadge(status) {
+    const badges = {
+        'new': 'badge-warning',
+        'contacted': 'badge-gray',
+        'qualified': 'badge-success',
+        'won': 'badge-success',
+        'lost': 'badge-gray'
+    };
+    return `<span class="badge ${badges[status] || 'badge-gray'}">${status.toUpperCase()}</span>`;
+}
+
+function renderLeadActions(lead) {
+    if (lead.status === 'new') {
+        return `<button class="btn btn-primary btn-sm" onclick="markLeadContacted('${lead.id}')">Contact</button>`;
+    } else if (lead.status === 'contacted') {
+        return `<button class="btn btn-success btn-sm" onclick="markLeadQualified('${lead.id}')">Qualify</button>`;
+    } else if (lead.status === 'qualified') {
+        return `<button class="btn btn-primary btn-sm" onclick="convertLeadToClient('${lead.id}')">→ Client</button>`;
+    } else if (lead.status === 'won') {
+        return `<span class="text-muted">✓ Converted</span>`;
+    }
+    return '';
+}
+
+async function markLeadContacted(leadId) {
+    try {
+        await apiCall(`/leads/${leadId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'contacted' })
+        });
+        loadLeads();
+    } catch (error) {
+        // Error shown by apiCall
+    }
+}
+
+async function markLeadQualified(leadId) {
+    try {
+        await apiCall(`/leads/${leadId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'qualified' })
+        });
+        loadLeads();
+    } catch (error) {
+        // Error shown by apiCall
+    }
+}
+
+async function convertLeadToClient(leadId) {
+    if (!confirm('Convert this lead to a client? This will create a new organization.')) return;
+
+    try {
+        const result = await apiCall(`/leads/${leadId}/convert`, {
+            method: 'POST'
+        });
+        alert(`Success! ${result.message}`);
+        loadLeads();
+        loadClients();
+        loadDashboard();
+    } catch (error) {
+        // Error shown by apiCall
+    }
 }
