@@ -264,4 +264,4 @@ Model vendors will make progress on reasoning, tool-calling, and safety. **You'l
 - [Architecture Overview](../architecture/overview.md) - How UAPK Gateway works
 - [Security & Compliance](../security) - Compliance features
 - [Threat Model](../security/threat-model.md) - Security design
-- [Pilot Program](../business/pilot.md) - Get started with expert help
+- [Pilot Program](../business/pilot) - Get started with expert help

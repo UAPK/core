@@ -264,11 +264,11 @@ Follow the [Quickstart Guide](../quickstart) to deploy the open-source version
 
 - **3. Pilot**
 
-Contact us for a [Pilot Program](pilot.md) to deploy one workflow in 2-4 weeks
+Contact us for a [Pilot Program](pilot) to deploy one workflow in 2-4 weeks
 
 - **4. Scale**
 
-Transition to [Enterprise Support](pricing.md#3-enterprise-support) for production
+Transition to [Enterprise Support](pricing#3-enterprise-support) for production
 
 ---
 
