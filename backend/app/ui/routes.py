@@ -682,3 +682,11 @@ async def ui_deny_action(
                 "error": str(e),
             },
         )
+
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    """Admin dashboard for client and invoice management."""
+    return templates.TemplateResponse("admin.html", {"request": request})
+

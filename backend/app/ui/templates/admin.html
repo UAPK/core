@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - UAPK Gateway</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1>🎯 UAPK Gateway - Admin Dashboard</h1>
+                <div class="nav-tabs">
+                    <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                    <button class="nav-tab" data-tab="clients">Clients</button>
+                    <button class="nav-tab" data-tab="invoices">Invoices</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard Panel -->
+        <div id="dashboard-panel" class="tab-panel active">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading dashboard...</p>
+            </div>
+        </div>
+
+        <!-- Clients Panel -->
+        <div id="clients-panel" class="tab-panel">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading clients...</p>
+            </div>
+        </div>
+
+        <!-- Invoices Panel -->
+        <div id="invoices-panel" class="tab-panel">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading invoices...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Client Modal -->
+    <div id="create-client-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Client</h2>
+                <button class="modal-close" onclick="closeModal('create-client-modal')">&times;</button>
+            </div>
+            <form id="client-form" onsubmit="handleCreateClient(event)">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Company Name *</label>
+                            <input type="text" name="name" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Slug (URL-friendly) *</label>
+                            <input type="text" name="slug" class="form-input" pattern="[a-z0-9-]+" required
+                                   placeholder="e.g., acme-corp">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Billing Email</label>
+                            <input type="email" name="billing_email" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contact Name</label>
+                            <input type="text" name="contact_name" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Contact Email</label>
+                        <input type="email" name="contact_email" class="form-input">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">VAT ID</label>
+                            <input type="text" name="vat_id" class="form-input" placeholder="e.g., DE123456789">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Country Code</label>
+                            <input type="text" name="country_code" class="form-input"
+                                   pattern="[A-Z]{2}" maxlength="2" placeholder="e.g., DE">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Currency</label>
+                        <select name="currency" class="form-input">
+                            <option value="EUR">EUR (€)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="GBP">GBP (£)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-client-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Invoice Modal -->
+    <div id="create-invoice-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Invoice</h2>
+                <button class="modal-close" onclick="closeModal('create-invoice-modal')">&times;</button>
+            </div>
+            <form id="invoice-form" onsubmit="handleCreateInvoice(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Client *</label>
+                        <select name="organization_id" class="form-input" required id="invoice-client-select">
+                            <option value="">Select a client...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description *</label>
+                        <input type="text" name="description" class="form-input" required
+                               placeholder="e.g., UAPK Gateway - Professional Plan">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Quantity *</label>
+                            <input type="number" name="quantity" class="form-input" value="1" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unit Price (€) *</label>
+                            <input type="number" name="unit_price" class="form-input" step="0.01" min="0" required
+                                   placeholder="199.00">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Customer Country</label>
+                            <input type="text" name="customer_country" class="form-input"
+                                   pattern="[A-Z]{2}" maxlength="2" placeholder="e.g., DE">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Payment Due (days)</label>
+                            <input type="number" name="due_days" class="form-input" value="30" min="0">
+                        </div>
+                    </div>
+
+                    <div class="mt-10">
+                        <p class="text-muted" style="font-size: 13px;">
+                            💡 VAT will be calculated automatically based on customer country (19% for DE, reverse charge for EU with VAT ID)
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('create-invoice-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Invoice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/admin.js"></script>
+    <script>
+        // Populate client dropdown when opening invoice modal
+        const originalOpenInvoiceModal = openCreateInvoiceModal;
+        openCreateInvoiceModal = async function(clientId = '') {
+            // Load clients if not already loaded
+            if (clients.length === 0) {
+                const data = await apiCall('/clients?page=1&page_size=100');
+                clients = data.clients;
+            }
+
+            // Populate dropdown
+            const select = document.getElementById('invoice-client-select');
+            select.innerHTML = '<option value="">Select a client...</option>' +
+                clients.map(c => `<option value="${c.id}"${c.id === clientId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+
+            originalOpenInvoiceModal(clientId);
+        };
+    </script>
+</body>
+</html>
