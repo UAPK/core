@@ -1,0 +1,39 @@
+[Unit]
+Description=UAPK Gateway - Universal Agent Protocol Kit Gateway
+Documentation=https://github.com/example/uapk-gateway
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=dsanker
+Group=dsanker
+WorkingDirectory=/home/dsanker/uapk-gateway/backend
+Environment="PATH=/home/dsanker/uapk-gateway/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/home/dsanker/uapk-gateway/backend"
+ExecStart=/home/dsanker/uapk-gateway/venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/dsanker/uapk-gateway/logs /tmp
+PrivateDevices=true
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -9,9 +9,11 @@ from app.api.v1 import (
     auth,
     capabilities,
     capability_tokens,
+    clients,
     gateway,
     health,
     interaction_records,
+    invoices,
     logs,
     manifests,
     memberships,
@@ -30,6 +32,8 @@ router.include_router(organizations.router)
 router.include_router(users.router)
 router.include_router(memberships.router)
 router.include_router(api_keys.router)
+router.include_router(clients.router)
+router.include_router(invoices.router)
 
 # UAPK core routes
 router.include_router(manifests.router)

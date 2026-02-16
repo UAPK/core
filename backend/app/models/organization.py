@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,17 @@ class Organization(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+
+    # Business/Client fields
+    billing_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    company_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    vat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    payment_terms_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -76,6 +87,16 @@ class Organization(Base):
     )
     capability_issuers: Mapped[list["CapabilityIssuer"]] = relationship(  # noqa: F821
         "CapabilityIssuer",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    subscriptions: Mapped[list["Subscription"]] = relationship(  # noqa: F821
+        "Subscription",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
+        "Invoice",
         back_populates="organization",
         cascade="all, delete-orphan",
     )

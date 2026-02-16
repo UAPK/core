@@ -100,3 +100,6 @@ runtime/
 audit.jsonl
 .env.production
 *.pem
+
+# Website dependencies
+website/node_modules/

@@ -14,6 +14,21 @@ from app.schemas.api_key import (
     ApiKeyList,
     ApiKeyResponse,
 )
+from app.schemas.client import (
+    ClientCreate,
+    ClientListResponse,
+    ClientResponse,
+    ClientUpdate,
+)
+from app.schemas.invoice import (
+    InvoiceCreate,
+    InvoiceItemCreate,
+    InvoiceItemResponse,
+    InvoiceListResponse,
+    InvoiceResponse,
+    InvoiceSummary,
+    InvoiceUpdateStatus,
+)
 from app.schemas.auth import (
     LoginRequest,
     OrgMembershipInfo,
@@ -139,6 +154,19 @@ __all__ = [
     "ApiKeyCreateResponse",
     "ApiKeyList",
     "ApiKeyResponse",
+    # Client
+    "ClientCreate",
+    "ClientListResponse",
+    "ClientResponse",
+    "ClientUpdate",
+    # Invoice
+    "InvoiceCreate",
+    "InvoiceItemCreate",
+    "InvoiceItemResponse",
+    "InvoiceListResponse",
+    "InvoiceResponse",
+    "InvoiceSummary",
+    "InvoiceUpdateStatus",
     # Gateway
     "ActionInfo",
     "ApprovalStatus",
