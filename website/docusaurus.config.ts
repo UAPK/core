@@ -15,10 +15,10 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://uapk.info',
+  url: 'https://uapk.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
-  // For custom domains with CNAME, use '/'
-  baseUrl: '/',
+  // For GitHub pages deployment, it is often '/<projectName>/'
+  baseUrl: '/core/',
 
   // Use trailing slash for cleaner URLs
   trailingSlash: false,
