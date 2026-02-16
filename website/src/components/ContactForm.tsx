@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import styles from './ContactForm.module.css';
 
-const API_URL = 'http://34.171.83.82:8000/api/v1/leads';
+// Use custom domain API endpoint
+const API_URL = 'https://api.uapk.info/api/v1/leads';
 
 export default function ContactForm(): JSX.Element {
   const [formData, setFormData] = useState({
