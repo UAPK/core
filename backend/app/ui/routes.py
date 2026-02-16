@@ -690,3 +690,10 @@ async def admin_dashboard(request: Request):
     """Admin dashboard for client and invoice management."""
     return templates.TemplateResponse("admin.html", {"request": request})
 
+
+
+@router.get("/contact", response_class=HTMLResponse)
+async def public_contact_form(request: Request):
+    """Public contact form (same-origin, no CORS issues)."""
+    return templates.TemplateResponse("contact-public.html", {"request": request})
+
