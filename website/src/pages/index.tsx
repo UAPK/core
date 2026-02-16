@@ -4,6 +4,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import ContactForm from '@site/src/components/ContactForm';
 import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
@@ -225,41 +226,27 @@ function WhyNotObsolete() {
 
 function FinalCTA() {
   return (
-    <section style={{padding: '4rem 0', textAlign: 'center'}}>
+    <section style={{padding: '4rem 0', backgroundColor: 'var(--ifm-color-emphasis-100)'}}>
       <div className="container">
-        <Heading as="h2">Ready to Ship Agents Safely?</Heading>
-        <p style={{fontSize: '1.2rem', marginBottom: '2rem'}}>
-          Choose your path to production
-        </p>
-        <div className="row">
-          <div className="col col--6">
-            <div style={{padding: '2rem', border: '2px solid var(--ifm-color-primary)', borderRadius: '8px'}}>
-              <h3>🔬 Self-Host (Free)</h3>
-              <p>Deploy in 5 minutes with Docker Compose</p>
-              <p><strong>Apache 2.0</strong> • Full source code • Community support</p>
-              <Link className="button button--outline button--lg" to="/docs/quickstart">
-                Start Now
-              </Link>
-            </div>
-          </div>
-          <div className="col col--6">
-            <div style={{padding: '2rem', border: '2px solid var(--ifm-color-primary)', borderRadius: '8px', backgroundColor: 'var(--ifm-color-primary-lightest)'}}>
-              <h3>🚀 Pilot Program</h3>
-              <p>Production-ready in 2-4 weeks with expert help</p>
-              <p><strong>$15K-$25K fixed fee</strong> • Manifests + training + 30-day support</p>
-              <Link className="button button--primary button--lg" to="/docs/business/pilot">
-                Book Pilot
-              </Link>
-            </div>
-          </div>
+        <div style={{textAlign: 'center', marginBottom: '3rem'}}>
+          <Heading as="h2">Ready to Deploy Agents Safely?</Heading>
+          <p style={{fontSize: '1.2rem', color: 'var(--ifm-color-emphasis-700)'}}>
+            Get expert help from a lawyer-developer who built this for real-world compliance needs
+          </p>
         </div>
-        <div style={{marginTop: '3rem'}}>
+
+        <ContactForm />
+
+        <div style={{textAlign: 'center', marginTop: '3rem'}}>
+          <p style={{fontSize: '1.1rem', marginBottom: '1rem'}}>
+            <strong>Or explore on your own:</strong>
+          </p>
           <p>
-            <Link to="https://github.com/UAPK/gateway">View on GitHub</Link>
+            <Link to="/docs/quickstart">Self-Host (Free)</Link>
             {' • '}
-            <Link to="/docs/intro">Read Documentation</Link>
+            <Link to="/docs/business/pricing">View Pricing</Link>
             {' • '}
-            <Link to="mailto:mail@uapk.info">Contact Sales</Link>
+            <Link to="https://github.com/UAPK/core">View on GitHub</Link>
           </p>
         </div>
       </div>
