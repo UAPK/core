@@ -23,7 +23,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'UAPK', // Usually your GitHub org/user name.
-  projectName: 'gateway', // Usually your repo name.
+  projectName: 'core', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -42,7 +42,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/UAPK/gateway/tree/main/website/',
+            'https://github.com/UAPK/core/tree/main/website/',
         },
         blog: {
           showReadingTime: true,
@@ -51,7 +51,7 @@ const config: Config = {
             xslt: true,
           },
           editUrl:
-            'https://github.com/UAPK/gateway/tree/main/website/',
+            'https://github.com/UAPK/core/tree/main/website/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
@@ -106,7 +106,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/UAPK/gateway',
+          href: 'https://github.com/UAPK/core',
           label: 'GitHub',
           position: 'right',
         },
@@ -154,7 +154,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/UAPK/gateway',
+              href: 'https://github.com/UAPK/core',
             },
             {
               label: 'Security',
